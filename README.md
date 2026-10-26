@@ -25,7 +25,7 @@ npx frappe-frontend-cli --help
 
 ---
 
-## Implemented Commands (Phase 1)
+## Implemented Commands (Phase 1 & 2)
 
 | Command | Description | Status |
 | :--- | :--- | :--- |
@@ -33,14 +33,34 @@ npx frappe-frontend-cli --help
 | `frappe-frontend-cli --version` | Display current package version | **Implemented** |
 | `frappe-frontend-cli doctor` | Diagnose environment (Node, PMs, Git, Bench, OS) | **Implemented** |
 | `frappe-frontend-cli doctor --json` | Output machine-readable diagnostic facts to stdout | **Implemented** |
+| `frappe-frontend-cli create vue <name>` | Scaffold, install, and verify a Vue 3 + Vite project | **Implemented** |
+| `frappe-frontend-cli create react <name>` | Scaffold, install, and verify a React + Vite project | **Implemented** |
+
+### Project Creation (`create`)
+
+```bash
+# Create Vue 3 + Vite project (TypeScript default)
+npx frappe-frontend-cli create vue my-vue-app
+
+# Create React + Vite project in JavaScript
+npx frappe-frontend-cli create react my-react-app --js
+
+# Specify package manager explicitly
+npx frappe-frontend-cli create vue my-vue-app --package-manager pnpm
+```
+
+**Options:**
+- `--ts`: Use TypeScript template (sensible default).
+- `--js`: Use JavaScript template.
+- `--package-manager <npm|pnpm|yarn|bun>`: Package manager to use (defaults to detected preferred manager).
+- `--skip-install`: Generate files without running package manager install.
+- `--skip-build`: Install dependencies without running production verification build.
 
 ### Planned Commands (Subsequent Phases)
 
 | Command | Target Phase | Description |
 | :--- | :--- | :--- |
-| `frappe-frontend-cli init` | Phase 2 / Phase 4 | Interactive stack selector and setup wizard |
-| `frappe-frontend-cli create vue <name>` | Phase 2 | Scaffold a modern Vue 3 + Vite project |
-| `frappe-frontend-cli create react <name>` | Phase 2 | Scaffold a modern React + Vite project |
+| `frappe-frontend-cli init` | Phase 4 | Interactive stack selector and setup wizard |
 | `frappe-frontend-cli create frappe-ui <name>` | Phase 4 | Scaffold a Vue 3 + Frappe UI + Tailwind project |
 | `frappe-frontend-cli add tailwind` | Phase 3 | Configure Tailwind CSS in an existing project |
 | `frappe-frontend-cli add bootstrap` | Phase 3 | Configure Bootstrap 5 in an existing project |

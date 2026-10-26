@@ -20,9 +20,9 @@ This document specifies the supported, experimental, and unsupported configurati
 
 | Framework | Framework Version | Build Tool | Frappe Integration Modes | Frappe Framework Target | Verification Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vue.js** | `^3.5.0` | Vite 6 / 5 | Standalone API, Custom App SPA, Desk Page | Frappe v14, v15, v16, develop | Supported |
-| **React** | `^18.3.0` / `^19.0.0` | Vite 6 / 5 | Standalone API, Custom App SPA | Frappe v14, v15, v16, develop | Supported |
-| **Frappe UI** | `^0.1.x` | Vite 5 | Custom App SPA, Standalone with Proxy | Frappe v15, v16, develop | Supported (Vue 3 only) |
+| **Vue.js** | `^3.5.13` | Vite 6 | Standalone API, Custom App SPA, Desk Page | Frappe v14, v15, v16, develop | **Verified (Phase 2)** |
+| **React** | `^18.3.1` | Vite 6 | Standalone API, Custom App SPA | Frappe v14, v15, v16, develop | **Verified (Phase 2)** |
+| **Frappe UI** | `^0.1.x` | Vite 5 | Custom App SPA, Standalone with Proxy | Frappe v15, v16, develop | Target for Phase 4 (Vue 3 only) |
 
 > **Critical Constraint**: Frappe UI is strictly a Vue 3 component library. React with Frappe UI is an **unsupported** configuration and will be rejected with an actionable explanation.
 

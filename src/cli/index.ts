@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { runDoctor } from './doctor';
+import { runCreate } from './create';
 import pc from 'picocolors';
 
 // Read version safely from package.json
@@ -55,15 +56,35 @@ export function createProgram(): Command {
 
   program
     .command('create <template> [name]')
-    .description('[Planned: Phase 2/4] Scaffold a frontend project (vue, react, frappe-ui)')
-    .action((template: string) => {
-      process.stderr.write(
-        pc.yellow(
-          `! 'create ${template}' is scheduled for Phase 2 (Vue/React) and Phase 4 (Frappe UI).\n`
-        )
-      );
-      process.exitCode = 1;
-    });
+    .description('Scaffold a verified frontend project (vue, react)')
+    .option('--ts', 'Use TypeScript template (default)')
+    .option('--js', 'Use JavaScript template')
+    .option('--package-manager <pm>', 'Package manager to use: npm, pnpm, yarn, bun')
+    .option('--skip-install', 'Do not install dependencies automatically')
+    .option('--skip-build', 'Do not run verification build after installation')
+    .action(
+      async (
+        template: string,
+        name: string | undefined,
+        options: {
+          ts?: boolean;
+          js?: boolean;
+          packageManager?: string;
+          skipInstall?: boolean;
+          skipBuild?: boolean;
+        }
+      ) => {
+        try {
+          const res = await runCreate(template, name, options);
+          process.exitCode = res.exitCode;
+        } catch (err) {
+          process.stderr.write(
+            pc.red(`x Project creation failed: ${err instanceof Error ? err.message : String(err)}\n`)
+          );
+          process.exitCode = 1;
+        }
+      }
+    );
 
   program
     .command('add <tool>')

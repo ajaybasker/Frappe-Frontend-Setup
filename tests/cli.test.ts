@@ -58,8 +58,8 @@ describe('CLI executable end-to-end', () => {
   });
 
   test('planned commands notify user and exit with code 1', async () => {
-    const res = await runner.run(cliBin, ['create', 'vue', 'my-app']);
+    const res = await runner.run(cliBin, ['add', 'tailwind']);
     assert.strictEqual(res.exitCode, 1);
-    assert.ok(res.stderr.includes('scheduled for Phase 2'));
+    assert.ok(res.stderr.includes('scheduled for Phase 3'));
   });
 });
