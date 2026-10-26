@@ -11,7 +11,7 @@ export interface ProjectInspection {
     scripts?: Record<string, string>;
     [key: string]: unknown;
   };
-  framework: 'vue' | 'react' | 'unknown';
+  framework: 'vue' | 'react' | 'frappe-ui' | 'unknown';
   isVite: boolean;
   isTs: boolean;
   packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun';

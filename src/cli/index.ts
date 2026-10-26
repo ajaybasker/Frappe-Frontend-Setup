@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { runDoctor } from './doctor';
 import { runCreate } from './create';
 import { runAdd } from './add';
+import { runInit } from './init';
 import pc from 'picocolors';
 
 // Read version safely from package.json
@@ -42,25 +43,46 @@ export function createProgram(): Command {
       }
     });
 
-  // Informative handlers for upcoming phases so users have clear expectations
+  // Command: init
   program
     .command('init')
-    .description('[Planned: Phase 4] Interactive stack selector and setup wizard')
-    .action(() => {
-      process.stderr.write(
-        pc.yellow(
-          `! 'init' command will be implemented in subsequent phases. Use 'doctor' to check prerequisites.\n`
-        )
-      );
-      process.exitCode = 1;
+    .description('Interactive setup wizard to initialize or configure a Frappe frontend project')
+    .option('--non-interactive', 'Run without interactive prompts')
+    .option('-y, --yes', 'Answer yes to all prompts / run non-interactively')
+    .option('--mode <mode>', 'Project mode: standalone or frappe-app (default: standalone)')
+    .option('--name <name>', 'Project name (for standalone mode)')
+    .option('--app <app>', 'Frappe custom app name (for frappe-app mode)')
+    .option('--bench-dir <path>', 'Frappe bench root directory')
+    .option('--framework <framework>', 'Frontend framework: frappe-ui, vue, react, none')
+    .option('--react', 'Target React (used for validation)')
+    .option('--ts', 'Use TypeScript')
+    .option('--js', 'Use JavaScript')
+    .option('--css <tool>', 'CSS solution: tailwind-v4, tailwind-v3, bootstrap, scss, none')
+    .option('--package-manager <pm>', 'Package manager: npm, pnpm, yarn, bun')
+    .option('--backend-url <url>', 'Frappe backend proxy URL (default: http://127.0.0.1:8000)')
+    .option('--skip-install', 'Do not install dependencies automatically')
+    .option('--skip-build', 'Do not run verification build')
+    .action(async (options) => {
+      try {
+        const res = await runInit(options);
+        process.exitCode = res.exitCode;
+      } catch (err) {
+        process.stderr.write(
+          pc.red(`x Wizard failed: ${err instanceof Error ? err.message : String(err)}\n`)
+        );
+        process.exitCode = 1;
+      }
     });
 
   program
     .command('create <template> [name]')
-    .description('Scaffold a verified frontend project (vue, react)')
+    .description('Scaffold a verified frontend project (vue, react, frappe-ui)')
     .option('--ts', 'Use TypeScript template (default)')
     .option('--js', 'Use JavaScript template')
+    .option('--framework <framework>', 'Framework target: vue, react, frappe-ui')
+    .option('--react', 'Target React framework (used for compatibility validation)')
     .option('--package-manager <pm>', 'Package manager to use: npm, pnpm, yarn, bun')
+    .option('--backend-url <url>', 'Frappe backend proxy URL (default: http://127.0.0.1:8000)')
     .option('--skip-install', 'Do not install dependencies automatically')
     .option('--skip-build', 'Do not run verification build after installation')
     .action(
@@ -70,7 +92,10 @@ export function createProgram(): Command {
         options: {
           ts?: boolean;
           js?: boolean;
+          framework?: string;
+          react?: boolean;
           packageManager?: string;
+          backendUrl?: string;
           skipInstall?: boolean;
           skipBuild?: boolean;
         }

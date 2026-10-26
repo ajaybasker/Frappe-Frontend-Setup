@@ -22,9 +22,9 @@ This document specifies the supported, experimental, and unsupported configurati
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Vue.js** | `^3.5.13` | Vite 6 | Standalone API, Custom App SPA, Desk Page | Frappe v14, v15, v16, develop | **Verified (Phase 2)** |
 | **React** | `^18.3.1` | Vite 6 | Standalone API, Custom App SPA | Frappe v14, v15, v16, develop | **Verified (Phase 2)** |
-| **Frappe UI** | `^0.1.x` | Vite 5 | Custom App SPA, Standalone with Proxy | Frappe v15, v16, develop | Target for Phase 4 (Vue 3 only) |
+| **Frappe UI** | `^1.0.2` | Vite 6 / 5 | Custom App SPA, Standalone with Proxy | Frappe v14, v15, v16, develop | **Verified (Phase 4)** |
 
-> **Critical Constraint**: Frappe UI is strictly a Vue 3 component library. React with Frappe UI is an **unsupported** configuration and will be rejected with an actionable explanation.
+> **Critical Constraint**: Frappe UI is strictly a Vue 3 component library. React with Frappe UI is an **unsupported** configuration and will be rejected with an actionable explanation. Frappe UI pins Tailwind CSS to v3.x compatibility mode via PostCSS.
 
 ---
 

@@ -25,7 +25,7 @@ npx frappe-frontend-cli --help
 
 ---
 
-## Implemented Commands (Phase 1 & 2)
+## Implemented Commands (Phase 1, 2, 3 & 4)
 
 | Command | Description | Status |
 | :--- | :--- | :--- |
@@ -35,27 +35,62 @@ npx frappe-frontend-cli --help
 | `frappe-frontend-cli doctor --json` | Output machine-readable diagnostic facts to stdout | **Implemented** |
 | `frappe-frontend-cli create vue <name>` | Scaffold, install, and verify a Vue 3 + Vite project | **Implemented** |
 | `frappe-frontend-cli create react <name>` | Scaffold, install, and verify a React + Vite project | **Implemented** |
+| `frappe-frontend-cli create frappe-ui <name>` | Scaffold, install, and verify a Frappe UI + Tailwind v3 project | **Implemented** |
 | `frappe-frontend-cli add tailwind` | Configure Tailwind CSS v4 or v3 in a Vite project | **Implemented** |
 | `frappe-frontend-cli add bootstrap` | Configure Bootstrap 5 in a Vite project | **Implemented** |
 | `frappe-frontend-cli add scss` | Configure SCSS (sass-embedded) in a Vite project | **Implemented** |
+| `frappe-frontend-cli init` | Interactive setup wizard for standalone or in-tree apps | **Implemented** |
+
+### Interactive Setup Wizard (`init`)
+
+Launch the interactive guided wizard:
+
+```bash
+npx frappe-frontend-cli init
+```
+
+The wizard guides developers through:
+1. Choosing setup mode: Standalone Vite project or in-tree Frappe custom app.
+2. Validating the custom app directory structure (detecting `hooks.py`, `pyproject.toml`, and bench location).
+3. Selecting framework (Frappe UI, Vue 3, React, or Vanilla Vite).
+4. Selecting compatible styling solutions (Tailwind CSS v4, Tailwind CSS v3, Bootstrap 5, SCSS).
+5. Selecting an available package manager (npm, pnpm, yarn, bun).
+6. Configuring the Frappe backend URL for Vite development proxy (`/api`, `/assets`, `/files`).
+7. Reviewing configuration summary and confirming before modifying any files.
+
+#### Non-Interactive Automation
+
+For CI/CD or scripting, pass `--non-interactive` (or `-y` / `--yes`):
+
+```bash
+# Standalone Frappe UI project
+npx frappe-frontend-cli init --non-interactive --name my-app --framework frappe-ui --ts
+
+# Configure frontend inside an existing Frappe custom app
+npx frappe-frontend-cli init --non-interactive --mode frappe-app --app my_custom_app --framework frappe-ui --backend-url http://127.0.0.1:8000
+```
 
 ### Project Creation (`create`)
 
 ```bash
+# Create Frappe UI project (Vue 3 + Tailwind CSS v3)
+npx frappe-frontend-cli create frappe-ui my-frappe-ui-app
+
+# Create Frappe UI project with custom backend proxy target
+npx frappe-frontend-cli create frappe-ui my-frappe-ui-app --backend-url http://my-frappe:8000
+
 # Create Vue 3 + Vite project (TypeScript default)
 npx frappe-frontend-cli create vue my-vue-app
 
 # Create React + Vite project in JavaScript
 npx frappe-frontend-cli create react my-react-app --js
-
-# Specify package manager explicitly
-npx frappe-frontend-cli create vue my-vue-app --package-manager pnpm
 ```
 
 **Options:**
 - `--ts`: Use TypeScript template (sensible default).
 - `--js`: Use JavaScript template.
 - `--package-manager <npm|pnpm|yarn|bun>`: Package manager to use (defaults to detected preferred manager).
+- `--backend-url <url>`: Frappe backend proxy URL (default: `http://127.0.0.1:8000`).
 - `--skip-install`: Generate files without running package manager install.
 - `--skip-build`: Install dependencies without running production verification build.
 
@@ -87,10 +122,8 @@ npx frappe-frontend-cli add scss
 
 | Command | Target Phase | Description |
 | :--- | :--- | :--- |
-| `frappe-frontend-cli init` | Phase 4 | Interactive stack selector and setup wizard |
-| `frappe-frontend-cli create frappe-ui <name>` | Phase 4 | Scaffold a Vue 3 + Frappe UI + Tailwind project |
-| `frappe-frontend-cli integrate frappe` | Phase 5 | Connect frontend to a Frappe custom app or proxy |
-| `frappe-frontend-cli check` | Phase 5 | Inspect an existing project for compatibility |
+| `frappe-frontend-cli integrate frappe` | Phase 5 | Connect frontend to a Frappe custom app hooks.py and asset pipeline |
+| `frappe-frontend-cli check` | Phase 5 | Inspect an existing project for Frappe compatibility |
 
 ---
 

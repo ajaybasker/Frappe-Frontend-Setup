@@ -43,6 +43,12 @@ step "Testing installed binary: --help"
 HELP="$("${BIN}" --help)"
 [[ "${HELP}" == *"Usage: frappe-frontend-cli"* ]] || fail "Help output missing usage"
 [[ "${HELP}" == *"doctor"* ]] || fail "Help output missing doctor command"
+[[ "${HELP}" == *"init"* ]] || fail "Help output missing init command"
+[[ "${HELP}" == *"create"* ]] || fail "Help output missing create command"
+
+step "Testing installed binary: init --help"
+INIT_HELP="$("${BIN}" init --help)"
+[[ "${INIT_HELP}" == *"Interactive setup wizard"* ]] || fail "init --help missing description"
 
 step "Testing installed binary: doctor (human output)"
 "${BIN}" doctor
@@ -56,6 +62,10 @@ step "Testing installed binary: doctor --json (stdout parsing)"
 
 step "Testing execution via npx from tarball"
 NPX_OUT="$(npx --yes --package "${TARBALL}" frappe-frontend-cli --version)"
+echo "npx version: ${NPX_OUT}"
 [[ "${NPX_OUT}" == "${VERSION}" ]] || fail "npx run output did not match version"
+
+NPX_INIT="$(npx --yes --package "${TARBALL}" frappe-frontend-cli init --help)"
+[[ "${NPX_INIT}" == *"Interactive setup wizard"* ]] || fail "npx init --help failed"
 
 printf '\n\033[1;32mPASS:\033[0m npm tarball %s verified successfully via global install and npx!\n' "$(basename "${TARBALL}")"

@@ -5,10 +5,12 @@ import { inspectProject, addTailwind, addBootstrap, addScss, AddCssResult, Tailw
 export interface AddCommandOptions {
   v3?: boolean;
   v4?: boolean;
+  version?: TailwindVersion;
   skipInstall?: boolean;
   skipBuild?: boolean;
   cwd?: string;
 }
+
 
 export async function runAdd(
   toolInput: string,
@@ -54,7 +56,7 @@ export async function runAdd(
   // 2. Dispatch to specific adapter
   switch (tool) {
     case 'tailwind': {
-      const version: TailwindVersion = options.v3 ? 'v3' : 'v4';
+      const version: TailwindVersion = options.v3 ? 'v3' : options.version || 'v4';
       const res = await addTailwind(
         inspection,
         {

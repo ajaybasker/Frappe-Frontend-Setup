@@ -16,27 +16,31 @@ Following the design principles established in `frappe-setup-cli`:
 ## 2. System Architecture
 
 ```
-frappe-frontend-cli (bin/cli.ts -> dist/bin/cli.js)
+frappe-frontend-cli (bin/frappe-frontend-cli.js)
   │
   ├── cli/ (Command routing and flags)
   │    ├── index.ts        (CLI definition: --help, --version, command registry)
-  │    └── doctor.ts       (Doctor command execution & output formatting)
+  │    ├── doctor.ts       (Doctor command execution & output formatting)
+  │    ├── create.ts       (Scaffolding runner for Vue, React, Frappe UI, Vanilla)
+  │    ├── add.ts          (CSS tooling runner for Tailwind v3/v4, Bootstrap, SCSS)
+  │    └── init.ts         (Interactive setup wizard and non-interactive runner)
   │
   ├── core/ (Foundation and utilities)
   │    ├── runner.ts       (Hardened subprocess gateway with timeout and signal trapping)
   │    ├── facts.ts        (Read-only environment discovery: OS, Node, PMs, Git, Bench)
   │    ├── evaluator.ts    (Pure diagnostic evaluation logic: facts -> CheckItems)
+  │    ├── frappe-app.ts   (Bench detection, custom app inspection, hooks.py validation)
+  │    ├── validation.ts   (Safe project naming and non-empty directory protection)
   │    ├── matrix.ts       (Declarative compatibility matrix)
   │    ├── ui.ts           (Terminal formatting, key-value tables, ANSI styling)
   │    └── types.ts        (Core TypeScript interfaces)
   │
-  ├── adapters/ (Planned for subsequent phases)
-  │    ├── frameworks/     (Vue, React, Frappe UI)
-  │    ├── css/            (Tailwind CSS v3/v4, Bootstrap 5, SCSS, Plain CSS)
-  │    └── frappe/         (Standalone API mode, Custom App in-tree mode)
+  ├── adapters/ (Framework and CSS Tooling Adapters)
+  │    ├── frameworks/     (Vue 3, React, Frappe UI, Vanilla)
+  │    └── css/            (Tailwind CSS v3/v4, Bootstrap 5, SCSS, Plain CSS)
   │
-  └── templates/ (Planned for subsequent phases)
-       └── (Verified, audited starter templates)
+  └── (Phase 5 Target)
+       └── frappe/         (Hooks.py integration and production asset bundling)
 ```
 
 ---

@@ -1,4 +1,4 @@
-export type SupportedFramework = 'vue' | 'react';
+export type SupportedFramework = 'vue' | 'react' | 'frappe-ui' | 'vanilla';
 export type SupportedLanguage = 'ts' | 'js';
 export type SupportedPackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
@@ -8,6 +8,7 @@ export interface ScaffoldOptions {
   framework: SupportedFramework;
   language: SupportedLanguage;
   packageManager?: SupportedPackageManager;
+  backendUrl?: string;
   skipInstall?: boolean;
   skipBuild?: boolean;
 }
@@ -20,7 +21,7 @@ export interface GeneratedFile {
 export interface FrameworkAdapter {
   readonly id: SupportedFramework;
   readonly name: string;
-  getFiles(options: { projectName: string; language: SupportedLanguage }): GeneratedFile[];
+  getFiles(options: { projectName: string; language: SupportedLanguage; backendUrl?: string }): GeneratedFile[];
 }
 
 export interface ScaffoldResult {

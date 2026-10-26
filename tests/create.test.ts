@@ -48,13 +48,12 @@ describe('Project Creation (Vue & React Framework Adapters)', () => {
     assert.ok(res.stderr.includes("Unsupported template 'angular'"));
   });
 
-  test('notifies that frappe-ui is scheduled for Phase 4', async () => {
-    const res = await runner.run(cliBin, ['create', 'frappe-ui', 'my-ui-app'], {
+  test('rejects React + Frappe UI combination with clear explanation', async () => {
+    const res = await runner.run(cliBin, ['create', 'react-frappe-ui', 'my-ui-app'], {
       cwd: tempBaseDir,
     });
     assert.strictEqual(res.exitCode, 1);
-    assert.ok(res.stderr.includes('scheduled for Phase 4'));
-    assert.ok(res.stderr.includes('create vue'));
+    assert.ok(res.stderr.includes('Frappe UI is built exclusively for Vue 3 and does not support React'));
   });
 
   test('rejects unsupported package manager option', async () => {

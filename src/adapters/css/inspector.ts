@@ -39,8 +39,10 @@ export function inspectProject(targetDir: string): ProjectInspection {
   const isVite = Boolean(allDeps['vite'] || fs.existsSync(path.join(resolvedDir, 'vite.config.ts')) || fs.existsSync(path.join(resolvedDir, 'vite.config.js')));
 
   // 2. Detect Framework
-  let framework: 'vue' | 'react' | 'unknown' = 'unknown';
-  if (allDeps['vue'] || allDeps['@vitejs/plugin-vue']) {
+  let framework: 'vue' | 'react' | 'frappe-ui' | 'unknown' = 'unknown';
+  if (allDeps['frappe-ui']) {
+    framework = 'frappe-ui';
+  } else if (allDeps['vue'] || allDeps['@vitejs/plugin-vue']) {
     framework = 'vue';
   } else if (allDeps['react'] || allDeps['@vitejs/plugin-react']) {
     framework = 'react';

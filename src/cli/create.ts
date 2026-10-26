@@ -14,7 +14,10 @@ import { detectPackageManager, detectPackageManagers } from '../core/facts';
 export interface CreateCommandOptions {
   ts?: boolean;
   js?: boolean;
+  framework?: string;
   packageManager?: string;
+  backendUrl?: string;
+  react?: boolean;
   skipInstall?: boolean;
   skipBuild?: boolean;
   cwd?: string;
@@ -31,24 +34,29 @@ export async function runCreate(
   // 1. Template validation
   const normalizedTemplate = (template || '').toLowerCase().trim();
 
-  if (normalizedTemplate === 'frappe-ui') {
+  // Explicit rejection of React + Frappe UI combination
+  if (
+    (normalizedTemplate === 'frappe-ui' && (options.react || (options as any).framework === 'react')) ||
+    normalizedTemplate === 'react-frappe-ui' ||
+    normalizedTemplate === 'frappe-ui-react'
+  ) {
     process.stderr.write(
-      pc.yellow(
-        `! 'frappe-ui' scaffolding is scheduled for Phase 4.\n` +
-          `  Frappe UI requires Vue 3 and pins Tailwind CSS to v3.x.\n` +
-          `  To create a standard Vue 3 project now, run: npx frappe-frontend-cli create vue <name>\n`
+      pc.red(
+        `x Frappe UI is built exclusively for Vue 3 and does not support React.\n` +
+          `  Frappe UI components rely on Vue 3 reactivity and Vue single file components.\n` +
+          `  To create a React project, run: npx frappe-frontend-cli create react <name>\n`
       )
     );
     return {
       success: false,
       targetDir: '',
       projectName: projectNameInput || '',
-      framework: 'vue',
+      framework: 'frappe-ui',
       language: 'ts',
       packageManager: 'npm',
       installed: false,
       built: false,
-      error: 'frappe-ui is scheduled for Phase 4',
+      error: 'Frappe UI does not support React',
       filesGenerated: 0,
       exitCode: 1,
     };
@@ -58,8 +66,8 @@ export async function runCreate(
   if (!adapter) {
     process.stderr.write(
       pc.red(
-        `x Unsupported template '${template}'. Supported templates in Phase 2: 'vue', 'react'.\n` +
-          `  Example: npx frappe-frontend-cli create vue my-app\n`
+        `x Unsupported template '${template}'. Supported templates: 'vue', 'react', 'frappe-ui'.\n` +
+          `  Example: npx frappe-frontend-cli create frappe-ui my-app\n`
       )
     );
     return {
@@ -204,7 +212,7 @@ export async function runCreate(
     pc.cyan(`Scaffolding ${adapter.name} (${language === 'ts' ? 'TypeScript' : 'JavaScript'}) in ${targetDir}...\n`)
   );
 
-  const files = adapter.getFiles({ projectName, language });
+  const files = adapter.getFiles({ projectName, language, backendUrl: options.backendUrl });
 
   try {
     fs.mkdirSync(targetDir, { recursive: true });
