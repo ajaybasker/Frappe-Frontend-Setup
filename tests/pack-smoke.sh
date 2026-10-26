@@ -45,10 +45,20 @@ HELP="$("${BIN}" --help)"
 [[ "${HELP}" == *"doctor"* ]] || fail "Help output missing doctor command"
 [[ "${HELP}" == *"init"* ]] || fail "Help output missing init command"
 [[ "${HELP}" == *"create"* ]] || fail "Help output missing create command"
+[[ "${HELP}" == *"integrate"* ]] || fail "Help output missing integrate command"
+[[ "${HELP}" == *"check"* ]] || fail "Help output missing check command"
 
 step "Testing installed binary: init --help"
 INIT_HELP="$("${BIN}" init --help)"
 [[ "${INIT_HELP}" == *"Interactive setup wizard"* ]] || fail "init --help missing description"
+
+step "Testing installed binary: integrate --help"
+INTEGRATE_HELP="$("${BIN}" integrate --help)"
+[[ "${INTEGRATE_HELP}" == *"Connect frontend with a Frappe custom app"* ]] || fail "integrate --help missing description"
+
+step "Testing installed binary: check --help"
+CHECK_HELP="$("${BIN}" check --help)"
+[[ "${CHECK_HELP}" == *"Inspect frontend project and Frappe app"* ]] || fail "check --help missing description"
 
 step "Testing installed binary: doctor (human output)"
 "${BIN}" doctor

@@ -57,9 +57,9 @@ describe('CLI executable end-to-end', () => {
     assert.ok(res.stderr.includes("error: unknown command 'non-existent-cmd'"));
   });
 
-  test('planned commands notify user and exit with code 1', async () => {
-    const res = await runner.run(cliBin, ['integrate', 'frappe']);
+  test('unsupported integration target prints error and exits with code 1', async () => {
+    const res = await runner.run(cliBin, ['integrate', 'unsupported']);
     assert.strictEqual(res.exitCode, 1);
-    assert.ok(res.stderr.includes('scheduled for Phase 5'));
+    assert.ok(res.stderr.includes("Unsupported integration target 'unsupported'"));
   });
 });

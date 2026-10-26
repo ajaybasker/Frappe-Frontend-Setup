@@ -23,7 +23,9 @@ frappe-frontend-cli (bin/frappe-frontend-cli.js)
   │    ├── doctor.ts       (Doctor command execution & output formatting)
   │    ├── create.ts       (Scaffolding runner for Vue, React, Frappe UI, Vanilla)
   │    ├── add.ts          (CSS tooling runner for Tailwind v3/v4, Bootstrap, SCSS)
-  │    └── init.ts         (Interactive setup wizard and non-interactive runner)
+  │    ├── init.ts         (Interactive setup wizard and non-interactive runner)
+  │    ├── integrate.ts    (Frappe custom app routing and asset delivery integration)
+  │    └── check.ts        (Project and Frappe custom app diagnostics)
   │
   ├── core/ (Foundation and utilities)
   │    ├── runner.ts       (Hardened subprocess gateway with timeout and signal trapping)
@@ -35,12 +37,10 @@ frappe-frontend-cli (bin/frappe-frontend-cli.js)
   │    ├── ui.ts           (Terminal formatting, key-value tables, ANSI styling)
   │    └── types.ts        (Core TypeScript interfaces)
   │
-  ├── adapters/ (Framework and CSS Tooling Adapters)
-  │    ├── frameworks/     (Vue 3, React, Frappe UI, Vanilla)
-  │    └── css/            (Tailwind CSS v3/v4, Bootstrap 5, SCSS, Plain CSS)
-  │
-  └── (Phase 5 Target)
-       └── frappe/         (Hooks.py integration and production asset bundling)
+  └── adapters/ (Framework, CSS Tooling & Frappe Adapters)
+       ├── frameworks/     (Vue 3, React, Frappe UI, Vanilla)
+       ├── css/            (Tailwind CSS v3/v4, Bootstrap 5, SCSS, Plain CSS)
+       └── frappe/         (Inspector, hooks updater, Vite updater, route generator)
 ```
 
 ---

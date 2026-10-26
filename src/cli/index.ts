@@ -3,6 +3,8 @@ import { runDoctor } from './doctor';
 import { runCreate } from './create';
 import { runAdd } from './add';
 import { runInit } from './init';
+import { runIntegrate } from './integrate';
+import { runCheck } from './check';
 import pc from 'picocolors';
 
 // Read version safely from package.json
@@ -143,23 +145,77 @@ export function createProgram(): Command {
 
   program
     .command('integrate <target>')
-    .description('[Planned: Phase 5] Connect frontend with a Frappe custom app')
-    .action((target: string) => {
-      process.stderr.write(
-        pc.yellow(`! 'integrate ${target}' is scheduled for Phase 5 (Frappe integration).\n`)
-      );
-      process.exitCode = 1;
-    });
+    .description('Connect frontend with a Frappe custom app for production asset delivery and routing')
+    .option('--app <name>', 'Target Frappe custom app name')
+    .option('--bench-dir <path>', 'Frappe bench root directory')
+    .option('--frontend-dir <path>', 'Frontend source directory')
+    .option('--route <route>', 'Frappe portal SPA route (default: frontend)')
+    .option('--check', 'Inspect integration status without modifying files')
+    .option('--dry-run', 'Display proposed changes without writing files or building')
+    .option('--skip-build', 'Skip running production build verification')
+    .option('-y, --yes', 'Automatically confirm changes without interactive prompt')
+    .action(
+      async (
+        target: string,
+        options: {
+          app?: string;
+          benchDir?: string;
+          frontendDir?: string;
+          route?: string;
+          check?: boolean;
+          dryRun?: boolean;
+          skipBuild?: boolean;
+          yes?: boolean;
+        }
+      ) => {
+        try {
+          const res = await runIntegrate(target, options);
+          process.exitCode = res.exitCode;
+        } catch (err) {
+          process.stderr.write(
+            pc.red(`x Integration failed: ${err instanceof Error ? err.message : String(err)}\n`)
+          );
+          process.exitCode = 1;
+        }
+      }
+    );
 
   program
-    .command('check')
-    .description('[Planned: Phase 5] Inspect existing frontend project for Frappe compatibility')
-    .action(() => {
-      process.stderr.write(
-        pc.yellow(`! 'check' is scheduled for Phase 5 (Project inspection).\n`)
-      );
-      process.exitCode = 1;
-    });
+    .command('check [dir]')
+    .description('Inspect frontend project and Frappe app for compatibility, configuration, and health')
+    .option('--cwd <path>', 'Working directory to inspect')
+    .option('--app <name>', 'Frappe custom app name')
+    .option('--bench-dir <path>', 'Frappe bench root directory')
+    .option('--route <route>', 'Frappe portal SPA route')
+    .option('--json', 'Output machine-readable report in JSON format to stdout')
+    .action(
+      async (
+        dir: string | undefined,
+        options: {
+          cwd?: string;
+          app?: string;
+          benchDir?: string;
+          route?: string;
+          json?: boolean;
+        }
+      ) => {
+        try {
+          const { exitCode } = await runCheck({
+            cwd: dir || options.cwd,
+            app: options.app,
+            benchDir: options.benchDir,
+            route: options.route,
+            json: options.json,
+          });
+          process.exitCode = exitCode;
+        } catch (err) {
+          process.stderr.write(
+            pc.red(`x Diagnostic check failed: ${err instanceof Error ? err.message : String(err)}\n`)
+          );
+          process.exitCode = 1;
+        }
+      }
+    );
 
   program.addHelpText(
     'after',
@@ -169,6 +225,10 @@ ${pc.bold('Examples:')}
   $ npx frappe-frontend-cli --version
   $ npx frappe-frontend-cli doctor
   $ npx frappe-frontend-cli doctor --json
+  $ npx frappe-frontend-cli create frappe-ui frontend
+  $ npx frappe-frontend-cli integrate frappe --app my_custom_app
+  $ npx frappe-frontend-cli integrate frappe --check
+  $ npx frappe-frontend-cli check
 `
   );
 

@@ -25,7 +25,7 @@ npx frappe-frontend-cli --help
 
 ---
 
-## Implemented Commands (Phase 1, 2, 3 & 4)
+## Implemented Commands (Phases 1 through 5)
 
 | Command | Description | Status |
 | :--- | :--- | :--- |
@@ -40,6 +40,8 @@ npx frappe-frontend-cli --help
 | `frappe-frontend-cli add bootstrap` | Configure Bootstrap 5 in a Vite project | **Implemented** |
 | `frappe-frontend-cli add scss` | Configure SCSS (sass-embedded) in a Vite project | **Implemented** |
 | `frappe-frontend-cli init` | Interactive setup wizard for standalone or in-tree apps | **Implemented** |
+| `frappe-frontend-cli integrate frappe` | Connect frontend with custom app routing, hooks, and asset delivery | **Implemented (Phase 5)** |
+| `frappe-frontend-cli check` | Inspect project & Frappe app for compatibility, configuration, and health | **Implemented (Phase 5)** |
 
 ### Interactive Setup Wizard (`init`)
 
@@ -118,12 +120,68 @@ npx frappe-frontend-cli add scss
 - `--skip-install`: Update project configuration and stylesheets without running package manager install.
 - `--skip-build`: Skip verification build.
 
-### Planned Commands (Subsequent Phases)
+### Frappe Custom App Integration (`integrate frappe`)
 
-| Command | Target Phase | Description |
-| :--- | :--- | :--- |
-| `frappe-frontend-cli integrate frappe` | Phase 5 | Connect frontend to a Frappe custom app hooks.py and asset pipeline |
-| `frappe-frontend-cli check` | Phase 5 | Inspect an existing project for Frappe compatibility |
+Connect your frontend SPA directly to a Frappe custom app for production asset delivery, CSRF protection, and server-side Jinja SPA loading:
+
+```bash
+# Integrate frontend with custom app
+npx frappe-frontend-cli integrate frappe --app my_custom_app
+
+# Check integration status without modifying files
+npx frappe-frontend-cli integrate frappe --app my_custom_app --check
+
+# Dry-run proposed changes without writing files or building
+npx frappe-frontend-cli integrate frappe --app my_custom_app --dry-run
+
+# Custom portal route (default: /frontend)
+npx frappe-frontend-cli integrate frappe --app my_custom_app --route dashboard
+```
+
+**Options:**
+- `--app <name>`: Target Frappe custom app name.
+- `--bench-dir <path>`: Frappe bench directory path.
+- `--frontend-dir <path>`: Frontend source directory (defaults to `frontend/` inside the app).
+- `--route <route>`: Frappe portal SPA route (default: `frontend`).
+- `--check`: Inspect integration health and diagnose missing items without modifying any files.
+- `--dry-run`: Display proposed file modifications and actions without writing files or building.
+- `--skip-build`: Configure Vite, hooks, and templates without triggering a production build.
+- `-y, --yes`: Proceed automatically without interactive confirmation.
+
+**What `integrate frappe` does:**
+1. Validates the Bench root and Frappe custom app structure (`hooks.py`, `pyproject.toml`, `public/`, `www/`).
+2. Configures Vite production `base` to `/assets/<app>/frontend/` and `build.outDir` to `../<app>/public/frontend` with `.bak` backup creation.
+3. Updates `hooks.py` `website_route_rules` with client-side SPA subrouting (`/frontend/<path:app_path>`), preserving existing hooks and comments.
+4. Generates portal controller `www/<route>.py` (returning CSRF token, session boot dictionary, and `no_cache = 1`).
+5. Generates portal template `www/<route>.html` (rendering Jinja SPA container with `window.frappe` session context).
+6. Executes production build (`npm run build`) and verifies assets in `<app>/public/frontend`.
+7. Outputs full file change report with exact shell commands to revert changes if desired.
+
+---
+
+### Project & Integration Diagnostics (`check`)
+
+Diagnose an existing frontend project and its Frappe custom app integration:
+
+```bash
+# Inspect current project directory
+npx frappe-frontend-cli check
+
+# Inspect specific project or custom app
+npx frappe-frontend-cli check ./apps/my_custom_app/frontend
+
+# Output machine-readable JSON report
+npx frappe-frontend-cli check --json
+```
+
+**What `check` inspects:**
+- Frontend project `package.json` and package manager locks.
+- Framework detection (Vue 3, React, Frappe UI, Vanilla Vite).
+- Dependency health and missing `node_modules`.
+- CSS tooling and compatibility checks (e.g., flags incompatible Tailwind v4 when using Frappe UI).
+- Vite configuration (`base`, `build.outDir`, proxy settings).
+- Frappe custom app integration (hooks routing rule, `www/<route>.*` portal templates, production build assets).
+- Actionable recommendations for detected issues.
 
 ---
 

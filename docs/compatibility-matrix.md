@@ -47,7 +47,18 @@ This document specifies the supported, experimental, and unsupported configurati
 - **Dev Server Proxy**: Configured via `vite.config.ts` to proxy requests to `http://127.0.0.1:8000` to prevent CORS issues.
 - **Use Case**: Decoupled portals, customer-facing applications, mobile-first web apps.
 
-### Mode 2: In-Tree Custom App SPA
+### Mode 2: In-Tree Custom App SPA (**Verified in Phase 5**)
 - **Description**: Frontend code lives inside a Frappe custom app (`[bench]/apps/[app_name]/frontend/`) and builds directly into Frappe's public assets (`[bench]/apps/[app_name]/[app_name]/public/frontend/`).
-- **Asset Delivery**: Served through a custom Frappe web page (`www/frontend.py` + `www/frontend.html`) or Frappe Desk Page.
-- **Session & CSRF**: Automatically inherits Frappe session cookies and Jinja boot context.
+- **Asset Delivery Path**: In Frappe v14, v15, and v16, files in `[app_dir]/[app_name]/public/frontend/` are mapped by Nginx/Bench to `/assets/[app_name]/frontend/`.
+- **Vite Configuration**:
+  - `base: process.env.NODE_ENV === 'production' ? '/assets/[app_name]/frontend/' : '/'`
+  - `build.outDir: '../[app_name]/public/frontend'`
+  - `build.emptyOutDir: true`
+- **Frappe Routing Hooks**:
+  - Appended to `hooks.py`: `website_route_rules = [{"from_route": "/[route]/<path:app_path>", "to_route": "[route]"}]`
+  - Preserves all existing custom hooks, comments, and configurations without wholesale file replacement.
+- **Portal Page Controller & Template**:
+  - `www/[route].py`: Sets `no_cache = 1`, retrieves CSRF token via `frappe.sessions.get_csrf_token()`, and injects `boot` context.
+  - `www/[route].html`: Jinja template rendering `window.frappe = { csrf_token, boot }` and loading the Vite production bundle.
+- **Verification Status**:
+  - Bench detection, app structure validation, Vite config updates, `hooks.py` safe merging, portal templates, and production build verification are fully automated and verified via `npx frappe-frontend-cli integrate frappe` and `npx frappe-frontend-cli check`.
