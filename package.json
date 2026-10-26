@@ -1,0 +1,58 @@
+{
+  "name": "frappe-frontend-cli",
+  "version": "0.1.0",
+  "description": "Automated, verified frontend setup CLI for the Frappe Framework ecosystem (Vue, React, Frappe UI, Tailwind CSS, Bootstrap)",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "bin": {
+    "frappe-frontend-cli": "./bin/frappe-frontend-cli.js"
+  },
+  "files": [
+    "bin/",
+    "dist/src/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "pretest": "npm run build",
+    "test": "node --test dist/tests/*.test.js",
+    "test:pack": "bash tests/pack-smoke.sh",
+    "watch": "tsc --watch",
+    "lint": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ajaybasker/Frappe-Frontend-Setup.git"
+  },
+  "keywords": [
+    "frappe",
+    "frappe-ui",
+    "vue",
+    "react",
+    "tailwind",
+    "vite",
+    "frontend",
+    "cli",
+    "setup",
+    "erpnext"
+  ],
+  "author": "Frappe Frontend Setup Contributors",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ajaybasker/Frappe-Frontend-Setup/issues"
+  },
+  "homepage": "https://github.com/ajaybasker/Frappe-Frontend-Setup#readme",
+  "dependencies": {
+    "commander": "^13.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "typescript": "^5.7.3"
+  }
+}
