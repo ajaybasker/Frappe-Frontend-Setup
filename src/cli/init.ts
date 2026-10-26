@@ -15,6 +15,7 @@ export interface InitOptions {
   mode?: 'standalone' | 'frappe-app';
   name?: string;
   app?: string;
+  frontendDir?: string;
   benchDir?: string;
   framework?: 'vue' | 'react' | 'frappe-ui' | 'none' | 'vanilla';
   language?: 'ts' | 'js';
@@ -70,8 +71,10 @@ export class ReadlinePrompter implements Prompter {
   }
 
   async ask(question: string, defaultValue?: string): Promise<string> {
-    const q = defaultValue ? `${question} [Default: ${defaultValue}]: ` : `${question}: `;
-    const answer = await this.rl.question(pc.cyan(q));
+    const q = defaultValue
+      ? `  ${pc.cyan(pc.bold('?'))} ${pc.bold(pc.white(question))} ${pc.dim(`[Default: ${defaultValue}]`)}${pc.cyan(pc.bold(': '))}`
+      : `  ${pc.cyan(pc.bold('?'))} ${pc.bold(pc.white(question))}${pc.cyan(pc.bold(': '))}`;
+    const answer = await this.rl.question(q);
     const trimmed = answer.trim();
     return trimmed || defaultValue || '';
   }
@@ -81,18 +84,18 @@ export class ReadlinePrompter implements Prompter {
     choices: { label: string; value: string; hint?: string }[],
     defaultIndex = 0
   ): Promise<string> {
-    process.stderr.write(pc.bold(`\n${title}\n`));
+    process.stderr.write(`\n  ${pc.cyan(pc.bold('◈'))} ${pc.bold(pc.white(title))}\n`);
     choices.forEach((c, idx) => {
       const isDefault = idx === defaultIndex;
-      const num = `[${idx + 1}]`;
-      const line = `  ${pc.cyan(num)} ${c.label}${c.hint ? pc.dim(` (${c.hint})`) : ''}${
-        isDefault ? pc.green(' (default)') : ''
-      }\n`;
-      process.stderr.write(line);
+      const numBadge = isDefault ? pc.green(pc.bold(`  [${idx + 1}]`)) : pc.cyan(pc.bold(`  [${idx + 1}]`));
+      const labelText = pc.bold(c.label);
+      const hintText = c.hint ? pc.dim(` (${c.hint})`) : '';
+      const defaultTag = isDefault ? pc.green(pc.bold(' (default)')) : '';
+      process.stderr.write(`${numBadge} ${labelText}${hintText}${defaultTag}\n`);
     });
 
-    const promptText = `Select option [1-${choices.length}] (default: ${defaultIndex + 1}): `;
-    const answer = await this.rl.question(pc.cyan(promptText));
+    const promptText = `  ${pc.magenta(pc.bold('❯'))} ${pc.bold('Select option')} ${pc.dim(`[1-${choices.length}]`)} ${pc.dim(`(default: ${defaultIndex + 1})`)}${pc.magenta(pc.bold(': '))}`;
+    const answer = await this.rl.question(promptText);
     const trimmed = answer.trim();
     const num = parseInt(trimmed, 10);
     if (!isNaN(num) && num >= 1 && num <= choices.length) {
@@ -102,8 +105,9 @@ export class ReadlinePrompter implements Prompter {
   }
 
   async confirm(question: string, defaultYes = true): Promise<boolean> {
-    const hint = defaultYes ? '[Y/n]' : '[y/N]';
-    const answer = await this.rl.question(pc.cyan(`\n${question} ${hint} `));
+    const hint = defaultYes ? pc.green(pc.bold('[Y/n]')) : pc.yellow(pc.bold('[y/N]'));
+    const promptText = `  ${pc.yellow(pc.bold('?'))} ${pc.bold(pc.white(question))} ${hint} `;
+    const answer = await this.rl.question(promptText);
     const trimmed = answer.trim().toLowerCase();
     if (!trimmed) {
       return defaultYes;
@@ -172,14 +176,11 @@ export async function runInit(
 
   // Print Welcome banner
   process.stderr.write(
-    pc.cyan(
-      pc.bold(
-        `\n============================================================\n` +
-          `   Frappe Frontend Setup Wizard\n` +
-          `   Automated, verified frontend tooling for Frappe\n` +
-          `============================================================\n\n`
-      )
-    )
+    '\n' +
+      pc.cyan('╔══════════════════════════════════════════════════════════╗\n') +
+      pc.cyan('║') + pc.bold(pc.white('   ⚡ Frappe Frontend Setup Wizard                        ')) + pc.cyan('║\n') +
+      pc.cyan('║') + pc.dim('   Automated, verified frontend tooling for Frappe        ') + pc.cyan('║\n') +
+      pc.cyan('╚══════════════════════════════════════════════════════════╝\n\n')
   );
 
   let mode: 'standalone' | 'frappe-app' = options.mode || 'standalone';
@@ -272,8 +273,6 @@ export async function runInit(
       }
 
       appInfo = validation.app;
-      projectName = 'frontend';
-      targetDir = appInfo.frontendDir;
 
       process.stderr.write(
         pc.green(`✔ Found Frappe custom app '${appInfo.appName}' at ${appInfo.appDir}\n`)
@@ -282,8 +281,19 @@ export async function runInit(
         process.stderr.write(pc.dim(`  Bench directory: ${appInfo.benchDir}\n`));
       }
 
-      // Check if frontend directory already exists and contains files
-      if (appInfo.hasFrontendDir) {
+      // Allow user to enter custom frontend directory name (e.g. frontend, portal, dashboard, admin)
+      let frontendFolder = options.frontendDir || options.name || '';
+      if (!frontendFolder && !isNonInteractive && prompter) {
+        frontendFolder = await prompter.ask('Enter frontend directory name', 'frontend');
+      } else if (!frontendFolder) {
+        frontendFolder = 'frontend';
+      }
+
+      projectName = frontendFolder;
+      targetDir = path.join(appInfo.appDir, frontendFolder);
+
+      // Check if target frontend directory already exists and contains files
+      if (fs.existsSync(targetDir)) {
         const files = fs.readdirSync(targetDir);
         if (files.length > 0) {
           if (isNonInteractive) {
@@ -440,8 +450,16 @@ export async function runInit(
       const langChoice = await prompter.choose(
         'Step 3: Choose language',
         [
-          { label: 'TypeScript', value: 'ts', hint: 'Recommended for type safety' },
-          { label: 'JavaScript', value: 'js', hint: 'Plain ESNext' },
+          {
+            label: 'TypeScript (Supports both TypeScript & JavaScript)',
+            value: 'ts',
+            hint: 'Recommended for type safety; allowJs enabled for mixed TS/JS files',
+          },
+          {
+            label: 'JavaScript',
+            value: 'js',
+            hint: 'Plain ESNext JavaScript',
+          },
         ],
         0
       );
@@ -571,21 +589,27 @@ export async function runInit(
         ? 'SCSS (sass-embedded)'
         : 'None (Plain CSS)';
 
+    const langDisplay =
+      language === 'ts'
+        ? `${pc.green(pc.bold('TypeScript'))} ${pc.dim('(Hybrid: supports both TS & JS via allowJs)')}`
+        : `${pc.yellow(pc.bold('JavaScript'))} ${pc.dim('(Plain ESNext)')}`;
+
     process.stderr.write(
       '\n' +
-        pc.bold('------------------------------------------------------------\n') +
-        pc.bold('Proposed Configuration Summary:\n') +
-        pc.bold('------------------------------------------------------------\n') +
+        pc.cyan('┌────────────────────────────────────────────────────────────┐\n') +
+        pc.cyan('│') + pc.bold(pc.white('             Proposed Configuration Summary                 ')) + pc.cyan('│\n') +
+        pc.cyan('├────────────────────────────────────────────────────────────┤\n') +
         `  ${pc.bold('Setup Target:')}     ${
-          mode === 'frappe-app' ? `Frappe App '${appInfo?.appName}' (${appInfo?.appDir})` : 'Standalone Project'
+          mode === 'frappe-app' ? pc.green(pc.bold(`Frappe App '${appInfo?.appName}'`)) : pc.cyan(pc.bold('Standalone Project'))
         }\n` +
-        `  ${pc.bold('Target Directory:')} ${targetDir}\n` +
-        `  ${pc.bold('Framework:')}        ${frameworkDisplay}\n` +
-        `  ${pc.bold('Language:')}         ${language === 'ts' ? 'TypeScript' : 'JavaScript'}\n` +
-        `  ${pc.bold('Styling Tool:')}     ${cssDisplay}\n` +
-        `  ${pc.bold('Package Manager:')}  ${packageManager}\n` +
-        `  ${pc.bold('Backend Proxy:')}    ${backendUrl}\n` +
-        pc.bold('------------------------------------------------------------\n\n')
+        (mode === 'frappe-app' ? `  ${pc.bold('Frontend Folder:')}  ${pc.magenta(pc.bold(projectName))}\n` : '') +
+        `  ${pc.bold('Target Directory:')} ${pc.white(targetDir)}\n` +
+        `  ${pc.bold('Framework:')}        ${pc.magenta(pc.bold(frameworkDisplay))}\n` +
+        `  ${pc.bold('Language:')}         ${langDisplay}\n` +
+        `  ${pc.bold('Styling Tool:')}     ${pc.blue(pc.bold(cssDisplay))}\n` +
+        `  ${pc.bold('Package Manager:')}  ${pc.cyan(pc.bold(packageManager))}\n` +
+        `  ${pc.bold('Backend Proxy:')}    ${pc.dim(backendUrl)}\n` +
+        pc.cyan('└────────────────────────────────────────────────────────────┘\n\n')
     );
 
     if (!isNonInteractive && prompter) {
@@ -696,18 +720,18 @@ export async function runInit(
           `\nℹ Note for Frappe custom app '${appInfo?.appName}':\n` +
             `  The frontend application has been scaffolded inside '${targetDir}'.\n` +
             `  In Phase 5, run: npx frappe-frontend-cli integrate frappe\n` +
-            `  to configure hooks.py routing and production asset bundling.\n`
+            `  to configure hooks.py routing and production asset bundling for '${projectName}'.\n`
         )
       );
     }
 
-    process.stderr.write('\n' + pc.bold('Next steps:\n'));
-    process.stderr.write(`  cd "${targetDir}"\n`);
+    process.stderr.write('\n' + pc.bold(pc.white('Next steps:\n')));
+    process.stderr.write(`  ${pc.dim('1.')} ${pc.cyan(`cd "${targetDir}"`)}\n`);
     if (options.skipInstall) {
-      process.stderr.write(`  ${packageManager} install\n`);
+      process.stderr.write(`  ${pc.dim('2.')} ${pc.cyan(`${packageManager} install`)}\n`);
     }
     const devCmd = packageManager === 'yarn' ? 'yarn dev' : `${packageManager} run dev`;
-    process.stderr.write(`  ${devCmd}\n\n`);
+    process.stderr.write(`  ${pc.dim(options.skipInstall ? '3.' : '2.')} ${pc.green(pc.bold(devCmd))}\n\n`);
 
     return {
       success: true,

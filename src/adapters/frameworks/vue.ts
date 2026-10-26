@@ -54,7 +54,7 @@ export default defineConfig({
       content: viteConfig,
     });
 
-    // 3. tsconfig.json (if TS)
+    // 3. tsconfig.json (if TS) or jsconfig.json (if JS)
     if (isTs) {
       const tsconfig = {
         compilerOptions: {
@@ -64,6 +64,8 @@ export default defineConfig({
           lib: ['ES2020', 'DOM', 'DOM.Iterable'],
           skipLibCheck: true,
           moduleResolution: 'bundler',
+          allowJs: true,
+          checkJs: false,
           resolveJsonModule: true,
           isolatedModules: true,
           noEmit: true,
@@ -72,7 +74,7 @@ export default defineConfig({
           noUnusedParameters: true,
           noFallthroughCasesInSwitch: true,
         },
-        include: ['src/**/*.ts', 'src/**/*.d.ts', 'src/**/*.tsx', 'src/**/*.vue'],
+        include: ['src/**/*.ts', 'src/**/*.d.ts', 'src/**/*.tsx', 'src/**/*.vue', 'src/**/*.js', 'src/**/*.jsx'],
       };
       files.push({
         relativePath: 'tsconfig.json',
@@ -89,6 +91,21 @@ declare module '*.vue' {
   export default component;
 }
 `,
+      });
+    } else {
+      const jsconfig = {
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'ESNext',
+          moduleResolution: 'bundler',
+          strict: false,
+          jsx: 'preserve',
+        },
+        include: ['src/**/*'],
+      };
+      files.push({
+        relativePath: 'jsconfig.json',
+        content: JSON.stringify(jsconfig, null, 2) + '\n',
       });
     }
 

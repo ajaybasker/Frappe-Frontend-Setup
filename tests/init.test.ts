@@ -244,5 +244,81 @@ describe('Interactive & Non-Interactive Setup Wizard (init)', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
     assert.ok(pkg.dependencies['vue']);
     assert.ok(pkg.dependencies['bootstrap']);
+
+    // Check tsconfig has allowJs for hybrid TS+JS support
+    const tsconfig = JSON.parse(fs.readFileSync(path.join(targetDir, 'tsconfig.json'), 'utf8'));
+    assert.strictEqual(tsconfig.compilerOptions.allowJs, true, 'tsconfig must enable allowJs for TS+JS support');
+  });
+
+  test('non-interactive: supports custom frontend directory name inside Frappe custom app (--frontend-dir)', async () => {
+    const customFrontendName = 'portal-custom';
+    const customFrontendDir = path.join(mockBenchDir, 'apps', 'crm_custom', customFrontendName);
+
+    const res = await runner.run(
+      cliBin,
+      [
+        'init',
+        '--non-interactive',
+        '--mode',
+        'frappe-app',
+        '--app',
+        'crm_custom',
+        '--frontend-dir',
+        customFrontendName,
+        '--bench-dir',
+        mockBenchDir,
+        '--framework',
+        'vue',
+        '--ts',
+        '--skip-install',
+      ],
+      { cwd: tempBaseDir }
+    );
+
+    assert.strictEqual(res.exitCode, 0, `Failed: ${res.stderr}\n${res.stdout}`);
+    assert.ok(fs.existsSync(customFrontendDir), 'Custom frontend directory created');
+    assert.ok(fs.existsSync(path.join(customFrontendDir, 'package.json')));
+    assert.ok(fs.existsSync(path.join(customFrontendDir, 'vite.config.ts')));
+
+    // Verify tsconfig.json has allowJs: true
+    const tsconfig = JSON.parse(fs.readFileSync(path.join(customFrontendDir, 'tsconfig.json'), 'utf8'));
+    assert.strictEqual(tsconfig.compilerOptions.allowJs, true, 'allowJs must be enabled');
+  });
+
+  test('interactive simulation: user enters custom frontend folder name for Frappe custom app', async () => {
+    const interactiveFolder = 'admin-ui';
+    const interactiveTargetDir = path.join(mockBenchDir, 'apps', 'crm_custom', interactiveFolder);
+
+    // Answers:
+    // 1. Mode: '2' (Frappe custom app)
+    // 2. App name: 'crm_custom'
+    // 3. Frontend dir name: 'admin-ui'
+    // 4. Framework: '1' (Frappe UI)
+    // 5. Language: '1' (TypeScript)
+    // 6. Package Manager: '1' (npm)
+    // 7. Backend URL: '' (default)
+    // 8. Confirm: 'y'
+    const mockPrompter = new MockPrompter(['2', 'crm_custom', interactiveFolder, '1', '1', '1', '', 'y']);
+
+    const res = await runInit(
+      {
+        cwd: tempBaseDir,
+        benchDir: mockBenchDir,
+        prompter: mockPrompter,
+        skipInstall: true,
+      },
+      runner
+    );
+
+    assert.strictEqual(res.success, true);
+    assert.strictEqual(res.exitCode, 0);
+    assert.strictEqual(res.targetDir, interactiveTargetDir);
+    assert.ok(fs.existsSync(interactiveTargetDir), 'admin-ui directory created');
+    assert.ok(fs.existsSync(path.join(interactiveTargetDir, 'package.json')));
+    assert.ok(fs.existsSync(path.join(interactiveTargetDir, 'vite.config.ts')));
+
+    // Verify Frappe UI tsconfig.json has allowJs: true
+    const tsconfig = JSON.parse(fs.readFileSync(path.join(interactiveTargetDir, 'tsconfig.json'), 'utf8'));
+    assert.strictEqual(tsconfig.compilerOptions.allowJs, true, 'Frappe UI tsconfig must enable allowJs');
   });
 });

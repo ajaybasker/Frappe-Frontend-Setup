@@ -56,7 +56,7 @@ export default defineConfig({
       content: viteConfig,
     });
 
-    // 3. tsconfig.json (if TS)
+    // 3. tsconfig.json (if TS) or jsconfig.json (if JS)
     if (isTs) {
       const tsconfig = {
         compilerOptions: {
@@ -66,6 +66,8 @@ export default defineConfig({
           module: 'ESNext',
           skipLibCheck: true,
           moduleResolution: 'bundler',
+          allowJs: true,
+          checkJs: false,
           resolveJsonModule: true,
           isolatedModules: true,
           noEmit: true,
@@ -85,6 +87,21 @@ export default defineConfig({
       files.push({
         relativePath: 'src/vite-env.d.ts',
         content: `/// <reference types="vite/client" />\n`,
+      });
+    } else {
+      const jsconfig = {
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'ESNext',
+          moduleResolution: 'bundler',
+          strict: false,
+          jsx: 'react-jsx',
+        },
+        include: ['src'],
+      };
+      files.push({
+        relativePath: 'jsconfig.json',
+        content: JSON.stringify(jsconfig, null, 2) + '\n',
       });
     }
 
