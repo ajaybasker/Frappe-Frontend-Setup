@@ -280,6 +280,65 @@ npx frappe-frontend-cli doctor --json
 
 ---
 
+## Troubleshooting & Recovery Guidance
+
+### Common Scenarios & Remediation
+
+1. **Multiple custom apps found in bench**:
+   - *Issue*: `frappe-frontend-cli integrate` fails with `Multiple Frappe custom apps detected in Bench: app_a, app_b`.
+   - *Fix*: Specify the exact custom app with `--app <app_name>` (e.g. `npx frappe-frontend-cli integrate frappe --app app_a`).
+
+2. **Tailwind CSS v3 vs. v4 Conflict**:
+   - *Issue*: Adding Tailwind v4 to a project with existing `tailwind.config.js` or Frappe UI fails with conflict error.
+   - *Fix*: Frappe UI requires Tailwind CSS v3 compatibility mode (`npx frappe-frontend-cli add tailwind --v3`). Do not mix Tailwind v4 and v3 in the same project.
+
+3. **Missing node_modules or dependencies**:
+   - *Issue*: `frappe-frontend-cli check` reports dependencies missing.
+   - *Fix*: Run your package manager install command (`npm install`, `pnpm install`, or `yarn`).
+
+4. **Oversized JavaScript Chunks (> 500 KB)**:
+   - *Issue*: `frappe-frontend-cli check` emits a bundle size advisory.
+   - *Fix*: Implement route-level code splitting using dynamic `import()` (e.g. `() => import('./views/Dashboard.vue')`) or configure `rollupOptions.output.manualChunks` in `vite.config.ts`.
+
+---
+
+## Security & Backup/Rollback Guidance
+
+### Subprocess Security
+All CLI external executions (`npm`, `pnpm`, `yarn`, `bun`, `git`, `bench`) pass through a hardened `Runner` gateway:
+- **Zero Shell Interpolation**: Subprocesses execute with `shell: false`. Command arguments are never passed to a shell interpreter, eliminating shell injection vectors.
+- **NUL-Byte Validation**: Input arguments are strictly validated against NUL bytes (`\0`).
+- **Process Group Isolation**: Subprocesses run in detached process groups with POSIX signal traps (`SIGINT`, `SIGTERM`) ensuring child processes terminate cleanly without lingering background daemons.
+
+### Non-Destructive Filesystem Updates & Rollback
+The CLI will never silently overwrite or destroy existing files:
+- **Automatic Backups**: Before modifying `hooks.py` or `vite.config.ts`, a timestamped backup is created in the same directory (e.g. `hooks.py.bak.1793007417201`).
+- **Exact Rollback Commands**: Every integration command prints exact copy-pasteable shell commands to revert changes:
+  ```bash
+  # Example reversal:
+  mv "path/to/vite.config.ts.bak.1793007417200" "path/to/vite.config.ts"
+  mv "path/to/hooks.py.bak.1793007417201" "path/to/hooks.py"
+  rm -f "path/to/www/frontend.py"
+  rm -f "path/to/www/frontend.html"
+  ```
+- **CSRF Protection**: Portal controllers (`www/<route>.py`) fetch session CSRF tokens via `frappe.sessions.get_csrf_token()` and pass them to the client window, preventing unauthorized cross-site requests.
+
+---
+
+## Explicit Limitations
+
+1. **Production HTTP Cache Headers**:
+   - The CLI configures Vite's production build manifest (`manifest: true`) and content-hashed asset filenames.
+   - However, HTTP caching headers (such as `Cache-Control: public, max-age=31536000, immutable` for `/assets/` and `Cache-Control: no-cache` for portal HTML) **must be configured at the reverse proxy (Nginx) layer**. Frappe's Python application server does not serve static production assets directly.
+
+2. **Frappe UI Framework Compatibility**:
+   - Frappe UI (`frappe-ui`) is built strictly for **Vue 3**. It cannot be used with React. Attempting to scaffold React with Frappe UI is rejected with an actionable error.
+
+3. **Turborepo Integration Scope**:
+   - The CLI detects Turborepo configurations (`turbo.json`) and reports monorepo status in diagnostics, but does not alter custom organization-specific turbo pipeline task definitions.
+
+---
+
 ## Development & Testing
 
 ```bash
@@ -292,21 +351,25 @@ npm run build
 # Run linting check
 npm run lint
 
-# Run all 99 automated tests
+# Run all 105 automated unit and end-to-end tests
 npm test
 
 # Run isolated npm pack and npx smoke test
 npm run test:pack
+
+# Dry-run tarball packaging
+npm pack --dry-run
 ```
 
 ---
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
+- [Architecture Guide](docs/architecture.md)
 - [Compatibility Matrix](docs/compatibility-matrix.md)
 - [Changelog](CHANGELOG.md)
 
 ## License
 
 MIT © [Frappe Frontend Setup Contributors](LICENSE)
+

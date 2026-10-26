@@ -324,6 +324,7 @@ export function inspectFrappeIntegration(
       viteManifestConfigured,
       mode,
       route,
+      page: pageName,
       outputDir,
       hooksPath,
       hooksConfigured,

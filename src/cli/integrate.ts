@@ -218,10 +218,10 @@ export async function runIntegrate(
 
   if (isDeskMode) {
     if (!insp.deskPageJsonExists) {
-      proposedChanges.push(`Create Desk Page DocType JSON: ${insp.outputDir}.json`);
+      proposedChanges.push(`Create Desk Page DocType JSON: ${insp.page}.json`);
     }
     if (!insp.deskPageJsExists) {
-      proposedChanges.push(`Create Desk Page controller JS: ${insp.outputDir}.js (mounts container & loads bundle)`);
+      proposedChanges.push(`Create Desk Page controller JS: ${insp.page}.js (mounts container & loads bundle)`);
     }
   } else {
     if (!insp.hooksConfigured) {
@@ -349,7 +349,7 @@ export async function runIntegrate(
     const deskRes = generateDeskPage({
       appDir: insp.app.appDir,
       appName: insp.app.appName,
-      pageName: insp.outputDir,
+      pageName: insp.page,
       title: options.pageTitle,
       moduleName: options.module,
       outputDir: insp.outputDir,
@@ -506,7 +506,7 @@ export async function runIntegrate(
     process.stderr.write(
       '\n' +
         pc.bold('Frappe Desk Access:\n') +
-        `  - Desk URL:   http://<your-site>/app/${insp.outputDir}\n` +
+        `  - Desk URL:   http://<your-site>/app/${insp.page}\n` +
         `  - Asset URL:  /assets/${insp.app.appName}/${insp.outputDir}/\n\n`
     );
   } else {

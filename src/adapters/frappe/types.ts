@@ -36,6 +36,7 @@ export interface FrappeIntegrationInspection {
   viteManifestConfigured: boolean;
   mode: 'portal' | 'desk';
   route: string;
+  page: string;
   outputDir: string;
   hooksPath: string;
   hooksConfigured: boolean;
