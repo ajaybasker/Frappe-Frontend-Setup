@@ -1,6 +1,6 @@
 {
   "name": "frappe-frontend-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automated, verified frontend setup CLI for the Frappe Framework ecosystem (Vue, React, Frappe UI, Tailwind CSS, Bootstrap)",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
