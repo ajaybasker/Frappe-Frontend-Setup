@@ -30,13 +30,13 @@ This document specifies the supported, experimental, and unsupported configurati
 
 ## 3. CSS Framework Compatibility
 
-| CSS Framework | Version | Compatible Stacks | Integration Mechanism | Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **Tailwind CSS v4** | `^4.0.0` | Vue 3, React (Standalone/Custom App) | `@tailwindcss/vite` | Modern Vite plugin approach; zero PostCSS required. |
-| **Tailwind CSS v3** | `^3.4.17` | Vue 3, React, **Frappe UI** | `postcss`, `autoprefixer` | **Required** for Frappe UI due to internal `@tailwindcss/forms` dependencies. |
-| **Bootstrap** | `^5.3.3` | Vue 3, React | CSS / SCSS import + `@popperjs/core` | Can be used standalone or alongside custom themes. |
-| **Sass / SCSS** | `latest` | Vue 3, React | `sass-embedded` (Vite built-in) | Zero-config in Vite once compiler is installed. |
-| **Plain CSS** | Standard CSS3 | All | Native Vite CSS | Zero dependencies. |
+| CSS Framework | Version | Compatible Stacks | Integration Mechanism | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Tailwind CSS v4** | `^4.0.0` | Vue 3, React (Standalone/Custom App) | `@tailwindcss/vite` | **Verified (Phase 3)** | Modern Vite plugin approach; zero PostCSS required. |
+| **Tailwind CSS v3** | `^3.4.17` | Vue 3, React, **Frappe UI** | `postcss`, `autoprefixer` | **Verified (Phase 3)** | Compatibility mode for Frappe UI (`postcss`, `tailwind.config.js`). |
+| **Bootstrap** | `^5.3.3` | Vue 3, React | CSS / SCSS import + `@popperjs/core` | **Verified (Phase 3)** | Runtime CSS + Popper.js; imported in main script. |
+| **Sass / SCSS** | `^1.83.0` | Vue 3, React | `sass-embedded` (Vite native) | **Verified (Phase 3)** | Compiles SCSS variables & nesting natively in Vite. |
+| **Plain CSS** | Standard CSS3 | All | Native Vite CSS | **Verified (Phase 1)** | Zero dependencies. |
 
 ---
 

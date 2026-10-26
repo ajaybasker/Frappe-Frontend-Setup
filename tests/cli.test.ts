@@ -58,8 +58,8 @@ describe('CLI executable end-to-end', () => {
   });
 
   test('planned commands notify user and exit with code 1', async () => {
-    const res = await runner.run(cliBin, ['add', 'tailwind']);
+    const res = await runner.run(cliBin, ['integrate', 'frappe']);
     assert.strictEqual(res.exitCode, 1);
-    assert.ok(res.stderr.includes('scheduled for Phase 3'));
+    assert.ok(res.stderr.includes('scheduled for Phase 5'));
   });
 });

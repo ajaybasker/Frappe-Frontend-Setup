@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { runDoctor } from './doctor';
 import { runCreate } from './create';
+import { runAdd } from './add';
 import pc from 'picocolors';
 
 // Read version safely from package.json
@@ -88,13 +89,32 @@ export function createProgram(): Command {
 
   program
     .command('add <tool>')
-    .description('[Planned: Phase 3] Add CSS framework or tooling (tailwind, bootstrap)')
-    .action((tool: string) => {
-      process.stderr.write(
-        pc.yellow(`! 'add ${tool}' is scheduled for Phase 3 (CSS tooling).\n`)
-      );
-      process.exitCode = 1;
-    });
+    .description('Add a CSS framework or tooling (tailwind, bootstrap, scss) to an existing project')
+    .option('--v3', 'Use Tailwind CSS v3 compatibility mode (for tailwind)')
+    .option('--v4', 'Use Tailwind CSS v4 mode (default for tailwind)')
+    .option('--skip-install', 'Do not install dependencies automatically')
+    .option('--skip-build', 'Do not run verification build')
+    .action(
+      async (
+        tool: string,
+        options: {
+          v3?: boolean;
+          v4?: boolean;
+          skipInstall?: boolean;
+          skipBuild?: boolean;
+        }
+      ) => {
+        try {
+          const res = await runAdd(tool, options);
+          process.exitCode = res.exitCode;
+        } catch (err) {
+          process.stderr.write(
+            pc.red(`x Failed to add tool: ${err instanceof Error ? err.message : String(err)}\n`)
+          );
+          process.exitCode = 1;
+        }
+      }
+    );
 
   program
     .command('integrate <target>')

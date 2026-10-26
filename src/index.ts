@@ -10,6 +10,8 @@ export * from './core/evaluator';
 export * from './core/validation';
 export * from './core/ui';
 export * from './adapters/frameworks';
+export * from './adapters/css';
 export * from './cli/doctor';
 export * from './cli/create';
+export * from './cli/add';
 export * from './cli/index';

@@ -35,6 +35,9 @@ npx frappe-frontend-cli --help
 | `frappe-frontend-cli doctor --json` | Output machine-readable diagnostic facts to stdout | **Implemented** |
 | `frappe-frontend-cli create vue <name>` | Scaffold, install, and verify a Vue 3 + Vite project | **Implemented** |
 | `frappe-frontend-cli create react <name>` | Scaffold, install, and verify a React + Vite project | **Implemented** |
+| `frappe-frontend-cli add tailwind` | Configure Tailwind CSS v4 or v3 in a Vite project | **Implemented** |
+| `frappe-frontend-cli add bootstrap` | Configure Bootstrap 5 in a Vite project | **Implemented** |
+| `frappe-frontend-cli add scss` | Configure SCSS (sass-embedded) in a Vite project | **Implemented** |
 
 ### Project Creation (`create`)
 
@@ -56,14 +59,36 @@ npx frappe-frontend-cli create vue my-vue-app --package-manager pnpm
 - `--skip-install`: Generate files without running package manager install.
 - `--skip-build`: Install dependencies without running production verification build.
 
+### Adding CSS Frameworks & Tooling (`add`)
+
+Execute inside an existing Vue or React Vite project:
+
+```bash
+# Add modern Tailwind CSS v4 (@tailwindcss/vite)
+npx frappe-frontend-cli add tailwind
+
+# Add Tailwind CSS v3 (compatibility mode for Frappe UI)
+npx frappe-frontend-cli add tailwind --v3
+
+# Add Bootstrap 5
+npx frappe-frontend-cli add bootstrap
+
+# Add SCSS support (migrates style.css to style.scss)
+npx frappe-frontend-cli add scss
+```
+
+**Options:**
+- `--v4`: Configure Tailwind CSS v4 (default).
+- `--v3`: Configure Tailwind CSS v3 compatibility mode (`postcss`, `autoprefixer`, `tailwind.config.js`).
+- `--skip-install`: Update project configuration and stylesheets without running package manager install.
+- `--skip-build`: Skip verification build.
+
 ### Planned Commands (Subsequent Phases)
 
 | Command | Target Phase | Description |
 | :--- | :--- | :--- |
 | `frappe-frontend-cli init` | Phase 4 | Interactive stack selector and setup wizard |
 | `frappe-frontend-cli create frappe-ui <name>` | Phase 4 | Scaffold a Vue 3 + Frappe UI + Tailwind project |
-| `frappe-frontend-cli add tailwind` | Phase 3 | Configure Tailwind CSS in an existing project |
-| `frappe-frontend-cli add bootstrap` | Phase 3 | Configure Bootstrap 5 in an existing project |
 | `frappe-frontend-cli integrate frappe` | Phase 5 | Connect frontend to a Frappe custom app or proxy |
 | `frappe-frontend-cli check` | Phase 5 | Inspect an existing project for compatibility |
 
