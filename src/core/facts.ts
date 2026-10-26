@@ -12,6 +12,8 @@ import {
   PackageManagerInfo,
 } from './types';
 import { parseSemver } from './matrix';
+import { findBenchApps } from './frappe-app';
+import { detectWorkspace } from './workspaces';
 
 function isWsl(): boolean {
   if (process.platform !== 'linux') return false;
@@ -192,12 +194,16 @@ export async function detectBench(runner: Runner, searchCwd: string): Promise<Be
     appScan = parent;
   }
 
+  const appsDiscovery = benchRoot ? findBenchApps(benchRoot) : { allApps: [], customApps: [] };
+
   return {
     cliAvailable,
     cliVersion,
     cliPath: cliAvailable ? 'bench' : undefined,
     isInsideBench,
     benchRoot,
+    allApps: appsDiscovery.allApps,
+    customApps: appsDiscovery.customApps,
     isInsideApp,
     appName,
     appRoot,
@@ -222,12 +228,23 @@ export async function gatherFacts(
     detectBench(runner, searchCwd),
   ]);
 
+  const workspace = detectWorkspace(searchCwd);
+
   return {
     os: detectOs(),
     node: detectNode(),
     packageManagers,
     git,
     bench,
+    workspace:
+      workspace.type !== 'none' || workspace.isTurborepo
+        ? {
+            type: workspace.type,
+            isTurborepo: workspace.isTurborepo,
+            rootDir: workspace.rootDir,
+            packages: workspace.packages,
+          }
+        : undefined,
     cwd: path.resolve(searchCwd),
   };
 }

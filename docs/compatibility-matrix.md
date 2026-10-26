@@ -20,8 +20,8 @@ This document specifies the supported, experimental, and unsupported configurati
 
 | Framework | Framework Version | Build Tool | Frappe Integration Modes | Frappe Framework Target | Verification Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vue.js** | `^3.5.13` | Vite 6 | Standalone API, Custom App SPA, Desk Page | Frappe v14, v15, v16, develop | **Verified (Phase 2)** |
-| **React** | `^18.3.1` | Vite 6 | Standalone API, Custom App SPA | Frappe v14, v15, v16, develop | **Verified (Phase 2)** |
+| **Vue.js** | `^3.5.13` | Vite 6 | Standalone API, Custom App SPA, Desk Page | Frappe v14, v15, v16, develop | **Verified (Phase 2 & 6)** |
+| **React** | `^18.3.1` | Vite 6 | Standalone API, Custom App SPA, Desk Page | Frappe v14, v15, v16, develop | **Verified (Phase 2 & 6)** |
 | **Frappe UI** | `^1.0.2` | Vite 6 / 5 | Custom App SPA, Standalone with Proxy | Frappe v14, v15, v16, develop | **Verified (Phase 4)** |
 
 > **Critical Constraint**: Frappe UI is strictly a Vue 3 component library. React with Frappe UI is an **unsupported** configuration and will be rejected with an actionable explanation. Frappe UI pins Tailwind CSS to v3.x compatibility mode via PostCSS.
@@ -47,18 +47,41 @@ This document specifies the supported, experimental, and unsupported configurati
 - **Dev Server Proxy**: Configured via `vite.config.ts` to proxy requests to `http://127.0.0.1:8000` to prevent CORS issues.
 - **Use Case**: Decoupled portals, customer-facing applications, mobile-first web apps.
 
-### Mode 2: In-Tree Custom App SPA (**Verified in Phase 5**)
-- **Description**: Frontend code lives inside a Frappe custom app (`[bench]/apps/[app_name]/frontend/`) and builds directly into Frappe's public assets (`[bench]/apps/[app_name]/[app_name]/public/frontend/`).
-- **Asset Delivery Path**: In Frappe v14, v15, and v16, files in `[app_dir]/[app_name]/public/frontend/` are mapped by Nginx/Bench to `/assets/[app_name]/frontend/`.
+### Mode 2: In-Tree Custom App Public Portal (**Verified in Phase 5 & 6**)
+- **Description**: Frontend code lives inside a Frappe custom app (`[bench]/apps/[app_name]/frontend/`) and builds directly into Frappe's public assets (`[bench]/apps/[app_name]/[app_name]/public/[output_dir]/`).
+- **Asset Delivery Path**: In Frappe v14, v15, and v16, files in `[app_dir]/[app_name]/public/[output_dir]/` are mapped by Nginx/Bench to `/assets/[app_name]/[output_dir]/`.
 - **Vite Configuration**:
-  - `base: process.env.NODE_ENV === 'production' ? '/assets/[app_name]/frontend/' : '/'`
-  - `build.outDir: '../[app_name]/public/frontend'`
+  - `base: process.env.NODE_ENV === 'production' ? '/assets/[app_name]/[output_dir]/' : '/'`
+  - `build.outDir: '../[app_name]/public/[output_dir]'`
   - `build.emptyOutDir: true`
+  - `build.manifest: true` (Generates `.vite/manifest.json` for deterministic cache-busting).
 - **Frappe Routing Hooks**:
   - Appended to `hooks.py`: `website_route_rules = [{"from_route": "/[route]/<path:app_path>", "to_route": "[route]"}]`
-  - Preserves all existing custom hooks, comments, and configurations without wholesale file replacement.
+  - Preserves all existing custom hooks, comments, and configurations.
 - **Portal Page Controller & Template**:
   - `www/[route].py`: Sets `no_cache = 1`, retrieves CSRF token via `frappe.sessions.get_csrf_token()`, and injects `boot` context.
   - `www/[route].html`: Jinja template rendering `window.frappe = { csrf_token, boot }` and loading the Vite production bundle.
-- **Verification Status**:
-  - Bench detection, app structure validation, Vite config updates, `hooks.py` safe merging, portal templates, and production build verification are fully automated and verified via `npx frappe-frontend-cli integrate frappe` and `npx frappe-frontend-cli check`.
+
+### Mode 3: Frappe Desk Page Integration (**Verified in Phase 6**)
+- **Description**: Frontend SPA runs inside Frappe's administrative Desk interface at `http://<site>/app/<page_name>`.
+- **Desk Page Convention**:
+  - Page DocType JSON: `<app>/<app>/<module>/page/<page_name>/<page_name>.json` defining standard Page DocType (`standard: "Yes"`).
+  - Page Controller: `<app>/<app>/<module>/page/<page_name>/<page_name>.js` registering `frappe.pages['<page_name>'].on_page_load(wrapper)`.
+  - DOM Container: Mounts `<div id="<page_name>-app"></div>` inside `page.main`.
+  - Bundle Loading: Calls `frappe.require('/assets/<app>/<output_dir>/main.js')` (or entry chunk).
+- **Clean Route Separation**:
+  - Desk Pages are completely separate from website `www/` routes and do not interfere with portal or website routes.
+
+---
+
+## 5. Multi-App Benches, Monorepo Workspaces & Tooling
+
+| Configuration | Detection Mechanism | CLI Support & Behavior | Status |
+| :--- | :--- | :--- | :--- |
+| **Multi-App Bench** | `apps/*/hooks.py` inspection | Discovers all apps; prompts or requires `--app <name>` when multiple custom apps are found. Prevents cross-app config pollution. | **Verified (Phase 6)** |
+| **pnpm Workspaces** | `pnpm-workspace.yaml` | Detects workspace root and package globs. Reported in `doctor` and `check`. | **Verified (Phase 6)** |
+| **npm / Yarn Workspaces** | `"workspaces"` in `package.json` | Detects root workspace configuration and package globs. | **Verified (Phase 6)** |
+| **Turborepo** | `turbo.json` | Detects Turborepo configuration; reports compatibility in diagnostics. | **Verified (Phase 6)** |
+| **Scoped Asset Outputs** | `--output-dir <dir>` | Scopes build output to `public/<output_dir>` and base path to `/assets/<app>/<output_dir>/` to prevent bundle collisions between multiple SPAs in the same Bench. | **Verified (Phase 6)** |
+| **Vite Build Manifest** | `build.manifest: true` | Verified in build output; mapped in `check` diagnostics. | **Verified (Phase 6)** |
+| **Bundle Chunk Diagnostics**| Chunk size inspection | Emits advisory warnings for JavaScript chunks exceeding 500 KB. | **Verified (Phase 6)** |

@@ -9,12 +9,14 @@ export interface ViteUpdateResult {
 
 /**
  * Safely updates vite.config.ts or vite.config.js to output production assets
- * to Frappe custom app's public/frontend folder and use /assets/<app>/frontend/ base.
+ * to Frappe custom app's public/<outputDir> folder, configure /assets/<app>/<outputDir>/ base,
+ * and enable build.manifest: true for cache-safe asset loading.
  */
 export function updateViteConfig(
   viteConfigPath: string,
   appName: string,
-  dryRun: boolean = false
+  dryRun: boolean = false,
+  outputDir: string = 'frontend'
 ): ViteUpdateResult {
   if (!fs.existsSync(viteConfigPath)) {
     throw new Error(`Vite configuration not found at '${viteConfigPath}'.`);
@@ -22,27 +24,30 @@ export function updateViteConfig(
 
   const originalContent = fs.readFileSync(viteConfigPath, 'utf8');
 
-  const expectedOutDir = `public/frontend`;
-  const expectedBase = `/assets/${appName}/frontend`;
+  const expectedOutDir = `public/${outputDir}`;
+  const expectedBase = `/assets/${appName}/${outputDir}`;
+  const expectedManifest = 'manifest: true';
 
   const hasOutDir = originalContent.includes(expectedOutDir);
   const hasBase = originalContent.includes(expectedBase);
+  const hasManifest = originalContent.includes(expectedManifest);
 
-  if (hasOutDir && hasBase) {
+  if (hasOutDir && hasBase && hasManifest) {
     return {
       modified: false,
       content: originalContent,
-      description: `Vite configuration already specifies Frappe production asset output and base.`,
+      description: `Vite configuration already specifies Frappe production asset output, base, and build manifest.`,
     };
   }
 
   let modified = originalContent;
 
-  const baseLine = `  base: process.env.NODE_ENV === 'production' ? '/assets/${appName}/frontend/' : '/',`;
+  const baseLine = `  base: process.env.NODE_ENV === 'production' ? '/assets/${appName}/${outputDir}/' : '/',`;
   const buildBlock =
     `  build: {\n` +
-    `    outDir: '../${appName}/public/frontend',\n` +
+    `    outDir: '../${appName}/public/${outputDir}',\n` +
     `    emptyOutDir: true,\n` +
+    `    manifest: true,\n` +
     `  },`;
 
   // 1. Inject or update base
@@ -55,20 +60,30 @@ export function updateViteConfig(
     }
   }
 
-  // 2. Inject or update build.outDir
-  if (!hasOutDir) {
-    if (modified.includes('build: {')) {
+  // 2. Inject or update build block
+  if (modified.includes('build: {')) {
+    // If build block exists, ensure outDir and manifest are set
+    if (!hasOutDir) {
       modified = modified.replace(
-        /build:\s*\{([^}]*)\}/,
-        `build: {\n    outDir: '../${appName}/public/frontend',\n    emptyOutDir: true,$1}`
+        /outDir:\s*['"][^'"]*['"]/,
+        `outDir: '../${appName}/public/${outputDir}'`
       );
-    } else {
-      // Insert after baseLine or defineConfig({
-      if (modified.includes(baseLine)) {
-        modified = modified.replace(baseLine, `${baseLine}\n${buildBlock}`);
-      } else {
-        modified = modified.replace(/defineConfig\(\{/, `defineConfig({\n${buildBlock}`);
+      if (!modified.includes(`public/${outputDir}`)) {
+        modified = modified.replace(
+          /build:\s*\{/,
+          `build: {\n    outDir: '../${appName}/public/${outputDir}',\n    emptyOutDir: true,`
+        );
       }
+    }
+    if (!hasManifest) {
+      modified = modified.replace(/build:\s*\{/, `build: {\n    manifest: true,`);
+    }
+  } else {
+    // Insert new build block after baseLine or defineConfig({
+    if (modified.includes(baseLine)) {
+      modified = modified.replace(baseLine, `${baseLine}\n${buildBlock}`);
+    } else {
+      modified = modified.replace(/defineConfig\(\{/, `defineConfig({\n${buildBlock}`);
     }
   }
 
@@ -85,6 +100,6 @@ export function updateViteConfig(
     modified: modified !== originalContent,
     content: modified,
     backupPath,
-    description: `Configured Vite production base ('/assets/${appName}/frontend/') and outDir ('../${appName}/public/frontend')`,
+    description: `Configured Vite production base ('/assets/${appName}/${outputDir}/'), outDir ('../${appName}/public/${outputDir}'), and manifest: true`,
   };
 }

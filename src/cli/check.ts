@@ -2,12 +2,16 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import pc from 'picocolors';
 import { inspectFrappeIntegration } from '../adapters/frappe';
+import { detectWorkspace } from '../core/workspaces';
 
 export interface CheckCommandOptions {
   cwd?: string;
   app?: string;
   benchDir?: string;
   route?: string;
+  mode?: 'portal' | 'desk';
+  page?: string;
+  outputDir?: string;
   json?: boolean;
 }
 
@@ -22,6 +26,14 @@ export interface CheckReport {
   projectDir: string;
   hasPackageJson: boolean;
   packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  workspace?: {
+    type: string;
+    isTurborepo: boolean;
+    rootDir: string;
+    isWorkspaceRoot: boolean;
+    isWorkspacePackage: boolean;
+    packages: string[];
+  };
   nodeModulesInstalled: boolean;
   framework: string;
   frameworkVersion?: string;
@@ -30,17 +42,28 @@ export interface CheckReport {
   viteProductionBaseConfigured: boolean;
   viteOutDirConfigured: boolean;
   viteProxyConfigured: boolean;
+  viteManifestConfigured: boolean;
+  manifestExists: boolean;
   cssTool: string;
+  bundleDiagnostics?: {
+    totalSizeKb: number;
+    largeChunks: Array<{ name: string; sizeKb: number }>;
+  };
   frappeApp?: {
     appName: string;
     appDir: string;
     benchDir?: string;
     frappeVersion?: string;
+    candidateApps?: string[];
     hooksPath?: string;
     hooksConfigured: boolean;
+    mode: 'portal' | 'desk';
     portalRoute: string;
+    outputDir: string;
     wwwPyExists: boolean;
     wwwHtmlExists: boolean;
+    deskPageJsonExists?: boolean;
+    deskPageJsExists?: boolean;
     publicAssetsExist: boolean;
     isFullyIntegrated: boolean;
   };
@@ -71,10 +94,13 @@ export async function runCheck(
   const pkgPath = path.join(projectDir, 'package.json');
   const hasPackageJson = fs.existsSync(pkgPath);
 
+  // Workspace detection
+  const workspaceInfo = detectWorkspace(projectDir);
+
   let packageManager: 'npm' | 'pnpm' | 'yarn' | 'bun' = 'npm';
-  if (fs.existsSync(path.join(projectDir, 'pnpm-lock.yaml'))) {
+  if (fs.existsSync(path.join(projectDir, 'pnpm-lock.yaml')) || workspaceInfo.type === 'pnpm') {
     packageManager = 'pnpm';
-  } else if (fs.existsSync(path.join(projectDir, 'yarn.lock'))) {
+  } else if (fs.existsSync(path.join(projectDir, 'yarn.lock')) || workspaceInfo.type === 'yarn') {
     packageManager = 'yarn';
   } else if (
     fs.existsSync(path.join(projectDir, 'bun.lockb')) ||
@@ -85,7 +111,21 @@ export async function runCheck(
 
   const nodeModulesInstalled = fs.existsSync(path.join(projectDir, 'node_modules'));
 
-  // 1. Package.json check
+  // 1. Workspace Diagnostics
+  if (workspaceInfo.type !== 'none' || workspaceInfo.isTurborepo) {
+    const wsLabel = workspaceInfo.isTurborepo
+      ? `${workspaceInfo.type.toUpperCase()} Workspace + Turborepo`
+      : `${workspaceInfo.type.toUpperCase()} Workspace`;
+
+    checks.push({
+      name: 'Monorepo Workspace',
+      status: 'ok',
+      message: wsLabel,
+      detail: `Root: ${workspaceInfo.rootDir}`,
+    });
+  }
+
+  // 2. Package.json check
   if (!hasPackageJson) {
     checks.push({
       name: 'Package Configuration',
@@ -108,6 +148,8 @@ export async function runCheck(
       viteProductionBaseConfigured: false,
       viteOutDirConfigured: false,
       viteProxyConfigured: false,
+      viteManifestConfigured: false,
+      manifestExists: false,
       cssTool: 'none',
       checks,
       issues,
@@ -151,7 +193,7 @@ export async function runCheck(
     ...(pkgData.devDependencies || {}),
   };
 
-  // 2. node_modules check
+  // 3. node_modules check
   if (!nodeModulesInstalled) {
     checks.push({
       name: 'Dependencies Installation',
@@ -169,7 +211,7 @@ export async function runCheck(
     });
   }
 
-  // 3. Framework detection
+  // 4. Framework detection
   let framework = 'unknown';
   let frameworkVersion: string | undefined;
 
@@ -228,7 +270,7 @@ export async function runCheck(
     }
   }
 
-  // 4. Vite Configuration Check
+  // 5. Vite Configuration Check
   let isVite = Boolean(allDeps['vite']);
   let viteConfigPath: string | undefined;
   const tsConfig = path.join(projectDir, 'vite.config.ts');
@@ -245,13 +287,15 @@ export async function runCheck(
   let viteProductionBaseConfigured = false;
   let viteOutDirConfigured = false;
   let viteProxyConfigured = false;
+  let viteManifestConfigured = false;
 
   if (viteConfigPath) {
     try {
       const viteContent = fs.readFileSync(viteConfigPath, 'utf8');
-      viteProductionBaseConfigured = viteContent.includes('/assets/') && viteContent.includes('/frontend');
-      viteOutDirConfigured = viteContent.includes('public/frontend');
+      viteProductionBaseConfigured = viteContent.includes('/assets/');
+      viteOutDirConfigured = viteContent.includes('public/');
       viteProxyConfigured = viteContent.includes('/api') || viteContent.includes('proxy');
+      viteManifestConfigured = viteContent.includes('manifest: true');
 
       checks.push({
         name: 'Vite Configuration',
@@ -263,14 +307,14 @@ export async function runCheck(
         checks.push({
           name: 'Vite Production Base URL',
           status: 'ok',
-          message: 'Configured for Frappe /assets/<app>/frontend/',
+          message: 'Configured for Frappe /assets/<app>/...',
         });
       } else {
         checks.push({
           name: 'Vite Production Base URL',
           status: 'warn',
           message: 'Not configured for Frappe production assets',
-          detail: 'Expected base: /assets/<app>/frontend/',
+          detail: 'Expected base: /assets/<app>/<outputDir>/',
         });
       }
 
@@ -278,14 +322,29 @@ export async function runCheck(
         checks.push({
           name: 'Vite Production Output Directory',
           status: 'ok',
-          message: 'Configured to ../<app>/public/frontend',
+          message: 'Configured to output into Frappe public folder',
         });
       } else {
         checks.push({
           name: 'Vite Production Output Directory',
           status: 'warn',
           message: 'Not configured to output into Frappe public directory',
-          detail: 'Expected build.outDir: ../<app>/public/frontend',
+          detail: 'Expected build.outDir: ../<app>/public/<outputDir>',
+        });
+      }
+
+      if (viteManifestConfigured) {
+        checks.push({
+          name: 'Vite Build Manifest',
+          status: 'ok',
+          message: 'build.manifest enabled for cache-busting asset loading',
+        });
+      } else {
+        checks.push({
+          name: 'Vite Build Manifest',
+          status: 'warn',
+          message: 'build.manifest is not configured in vite.config',
+          detail: 'Enabling build.manifest ensures safe hashed asset resolution',
         });
       }
 
@@ -317,7 +376,7 @@ export async function runCheck(
     });
   }
 
-  // 5. CSS Tooling Detection
+  // 6. CSS Tooling Detection
   let cssTool = 'none';
   if (allDeps['@tailwindcss/vite']) {
     cssTool = 'tailwind-v4';
@@ -335,10 +394,47 @@ export async function runCheck(
     message: cssTool,
   });
 
-  // 6. Frappe Custom App Integration Diagnostics
+  // 7. Frappe Custom App Integration Diagnostics & Asset Manifests
   let frappeAppReport: CheckReport['frappeApp'];
+  let manifestExists = false;
+  let bundleDiagnostics: CheckReport['bundleDiagnostics'];
 
-  // Try to find if this frontend is linked to or inside a Frappe custom app
+  // Check standalone candidate output directories (dist, public/frontend, public)
+  const candidateOutputDirs = [
+    path.join(projectDir, 'dist'),
+    path.join(projectDir, 'public', 'frontend'),
+    path.join(projectDir, 'public'),
+  ];
+  for (const cand of candidateOutputDirs) {
+    if (fs.existsSync(cand)) {
+      const candFiles = fs.readdirSync(cand);
+      if (
+        candFiles.includes('manifest.json') ||
+        (candFiles.includes('.vite') && fs.existsSync(path.join(cand, '.vite', 'manifest.json')))
+      ) {
+        manifestExists = true;
+      }
+      const assetsDir = path.join(cand, 'assets');
+      if (fs.existsSync(assetsDir)) {
+        let totalKb = 0;
+        const large: Array<{ name: string; sizeKb: number }> = [];
+        for (const file of fs.readdirSync(assetsDir)) {
+          const filePath = path.join(assetsDir, file);
+          const stat = fs.statSync(filePath);
+          const sizeKb = Math.round(stat.size / 1024);
+          totalKb += sizeKb;
+          if (sizeKb > 500 && file.endsWith('.js')) {
+            large.push({ name: file, sizeKb });
+          }
+        }
+        if (totalKb > 0) {
+          bundleDiagnostics = { totalSizeKb: totalKb, largeChunks: large };
+        }
+      }
+      if (manifestExists || bundleDiagnostics) break;
+    }
+  }
+
   let appName = options.app;
   if (!appName) {
     if (path.basename(projectDir) === 'frontend') {
@@ -352,21 +448,32 @@ export async function runCheck(
       app: appName,
       benchDir: options.benchDir,
       route: options.route,
+      mode: options.mode,
+      page: options.page,
+      outputDir: options.outputDir,
       frontendDir: projectDir,
     });
 
     if (inspectRes.success && inspectRes.inspection) {
       const insp = inspectRes.inspection;
+      manifestExists = insp.manifestExists;
+      bundleDiagnostics = insp.bundleDiagnostics;
+
       frappeAppReport = {
         appName: insp.app.appName,
         appDir: insp.app.appDir,
         benchDir: insp.benchDir,
         frappeVersion: insp.frappeVersion,
+        candidateApps: insp.candidateApps,
         hooksPath: insp.hooksPath,
         hooksConfigured: insp.hooksConfigured,
+        mode: insp.mode,
         portalRoute: insp.route,
+        outputDir: insp.outputDir,
         wwwPyExists: insp.wwwPyExists,
         wwwHtmlExists: insp.wwwHtmlExists,
+        deskPageJsonExists: insp.deskPageJsonExists,
+        deskPageJsExists: insp.deskPageJsExists,
         publicAssetsExist: insp.publicFrontendHasAssets,
         isFullyIntegrated: insp.isFullyIntegrated,
       };
@@ -378,22 +485,41 @@ export async function runCheck(
         detail: insp.frappeVersion ? `Frappe ${insp.frappeVersion}` : undefined,
       });
 
-      checks.push({
-        name: 'Frappe Routing (hooks.py)',
-        status: insp.hooksConfigured ? 'ok' : 'warn',
-        message: insp.hooksConfigured
-          ? `website_route_rules registered for /${insp.route}`
-          : `website_route_rules missing for /${insp.route}`,
-      });
+      if (insp.candidateApps && insp.candidateApps.length > 1) {
+        checks.push({
+          name: 'Bench Multi-App Environment',
+          status: 'ok',
+          message: `Detected ${insp.candidateApps.length} custom apps in Bench (${insp.candidateApps.join(', ')})`,
+        });
+      }
 
-      checks.push({
-        name: 'Portal Route Files',
-        status: insp.wwwPyExists && insp.wwwHtmlExists ? 'ok' : 'warn',
-        message:
-          insp.wwwPyExists && insp.wwwHtmlExists
-            ? `www/${insp.route}.py & www/${insp.route}.html present`
-            : `Missing www/${insp.route}.py or www/${insp.route}.html`,
-      });
+      if (insp.mode === 'desk') {
+        checks.push({
+          name: 'Desk Page Integration',
+          status: insp.deskPageJsonExists && insp.deskPageJsExists ? 'ok' : 'warn',
+          message:
+            insp.deskPageJsonExists && insp.deskPageJsExists
+              ? `Desk Page /app/${insp.outputDir} configured`
+              : `Desk Page definition missing for /app/${insp.outputDir}`,
+        });
+      } else {
+        checks.push({
+          name: 'Frappe Routing (hooks.py)',
+          status: insp.hooksConfigured ? 'ok' : 'warn',
+          message: insp.hooksConfigured
+            ? `website_route_rules registered for /${insp.route}`
+            : `website_route_rules missing for /${insp.route}`,
+        });
+
+        checks.push({
+          name: 'Portal Route Files',
+          status: insp.wwwPyExists && insp.wwwHtmlExists ? 'ok' : 'warn',
+          message:
+            insp.wwwPyExists && insp.wwwHtmlExists
+              ? `www/${insp.route}.py & www/${insp.route}.html present`
+              : `Missing www/${insp.route}.py or www/${insp.route}.html`,
+        });
+      }
 
       checks.push({
         name: 'Production Asset Delivery',
@@ -403,12 +529,59 @@ export async function runCheck(
           : `Assets missing in ${insp.publicFrontendDir} (needs build)`,
       });
 
+      checks.push({
+        name: 'Asset Manifest',
+        status: insp.manifestExists ? 'ok' : 'warn',
+        message: insp.manifestExists
+          ? 'Build manifest verified'
+          : 'manifest.json missing (build with manifest: true recommended)',
+      });
+
+      if (bundleDiagnostics && bundleDiagnostics.largeChunks.length > 0) {
+        bundleDiagnostics.largeChunks.forEach((c) => {
+          checks.push({
+            name: 'Bundle Size Advisory',
+            status: 'warn',
+            message: `Chunk '${c.name}' is ${c.sizeKb} KB (> 500 KB)`,
+            detail: 'Consider route-level code splitting using dynamic import()',
+          });
+          issues.push(`Bundle chunk '${c.name}' exceeds recommended 500 KB limit (${c.sizeKb} KB).`);
+          recommendations.push(
+            `Split large dependencies in '${c.name}' using dynamic import() or rollupOptions.output.manualChunks.`
+          );
+        });
+      }
+
       if (!insp.isFullyIntegrated) {
         insp.missingRequirements.forEach((req) => issues.push(req));
         recommendations.push(
-          `Run: npx frappe-frontend-cli integrate frappe --app ${insp.app.appName} --route ${insp.route}`
+          `Run: npx frappe-frontend-cli integrate ${insp.mode === 'desk' ? 'desk' : 'frappe'} --app ${insp.app.appName}${insp.mode === 'desk' ? ` --page ${insp.outputDir}` : ` --route ${insp.route}`}`
         );
       }
+    }
+  }
+
+  if (!frappeAppReport) {
+    if (manifestExists) {
+      checks.push({
+        name: 'Asset Manifest',
+        status: 'ok',
+        message: 'Build manifest verified',
+      });
+    }
+    if (bundleDiagnostics && bundleDiagnostics.largeChunks.length > 0) {
+      bundleDiagnostics.largeChunks.forEach((c) => {
+        checks.push({
+          name: 'Bundle Size Advisory',
+          status: 'warn',
+          message: `Chunk '${c.name}' is ${c.sizeKb} KB (> 500 KB)`,
+          detail: 'Consider route-level code splitting using dynamic import()',
+        });
+        issues.push(`Bundle chunk '${c.name}' exceeds recommended 500 KB limit (${c.sizeKb} KB).`);
+        recommendations.push(
+          `Split large dependencies in '${c.name}' using dynamic import() or rollupOptions.output.manualChunks.`
+        );
+      });
     }
   }
 
@@ -420,6 +593,17 @@ export async function runCheck(
     projectDir,
     hasPackageJson,
     packageManager,
+    workspace:
+      workspaceInfo.type !== 'none' || workspaceInfo.isTurborepo
+        ? {
+            type: workspaceInfo.type,
+            isTurborepo: workspaceInfo.isTurborepo,
+            rootDir: workspaceInfo.rootDir,
+            isWorkspaceRoot: workspaceInfo.isWorkspaceRoot,
+            isWorkspacePackage: workspaceInfo.isWorkspacePackage,
+            packages: workspaceInfo.packages,
+          }
+        : undefined,
     nodeModulesInstalled,
     framework,
     frameworkVersion,
@@ -428,7 +612,10 @@ export async function runCheck(
     viteProductionBaseConfigured,
     viteOutDirConfigured,
     viteProxyConfigured,
+    viteManifestConfigured,
+    manifestExists,
     cssTool,
+    bundleDiagnostics,
     frappeApp: frappeAppReport,
     checks,
     issues,
@@ -457,11 +644,19 @@ function renderTextReport(report: CheckReport): void {
       `  ${pc.bold('CSS Tooling:')}       ${report.cssTool}\n`
   );
 
+  if (report.workspace) {
+    process.stderr.write(
+      `  ${pc.bold('Workspace:')}         ${report.workspace.type.toUpperCase()} monorepo${report.workspace.isTurborepo ? ' (Turborepo)' : ''} at ${report.workspace.rootDir}\n`
+    );
+  }
+
   if (report.frappeApp) {
     process.stderr.write(
       `  ${pc.bold('Frappe Custom App:')} ${report.frappeApp.appName} (${report.frappeApp.appDir})\n` +
         `  ${pc.bold('Frappe Version:')}    ${report.frappeApp.frappeVersion || 'v14 / v15 / v16 compatible'}\n` +
-        `  ${pc.bold('SPA Route:')}         /${report.frappeApp.portalRoute}\n`
+        (report.frappeApp.mode === 'desk'
+          ? `  ${pc.bold('Desk Page:')}          /app/${report.frappeApp.outputDir}\n`
+          : `  ${pc.bold('SPA Route:')}         /${report.frappeApp.portalRoute}\n`)
     );
   }
 

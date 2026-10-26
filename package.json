@@ -12,6 +12,7 @@
     "dist/src/",
     "docs/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {

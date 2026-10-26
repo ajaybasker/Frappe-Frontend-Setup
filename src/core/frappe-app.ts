@@ -17,10 +17,17 @@ export interface FrappeAppInfo {
   };
 }
 
+export interface BenchAppsDiscovery {
+  benchDir: string;
+  allApps: string[];
+  customApps: string[];
+}
+
 export interface FrappeAppValidationResult {
   valid: boolean;
   app?: FrappeAppInfo;
   error?: string;
+  candidateApps?: string[];
 }
 
 /**
@@ -51,18 +58,58 @@ export function findBenchDirectory(startDir: string = process.cwd()): string | u
 }
 
 /**
+ * Discovers all apps and custom apps inside a Frappe bench root.
+ */
+export function findBenchApps(benchDir?: string): BenchAppsDiscovery {
+  if (!benchDir || !fs.existsSync(benchDir)) {
+    return { benchDir: benchDir || '', allApps: [], customApps: [] };
+  }
+
+  const appsDir = path.join(benchDir, 'apps');
+  const allApps: string[] = [];
+
+  if (fs.existsSync(appsDir)) {
+    try {
+      const entries = fs.readdirSync(appsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith('.')) {
+          allApps.push(entry.name);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const customApps = allApps.filter((a) => a !== 'frappe');
+  return { benchDir, allApps, customApps };
+}
+
+/**
  * Validates whether an app exists in the filesystem and is a legitimate Frappe custom app.
  */
 export function validateFrappeApp(
   appNameInput: string,
   options: { benchDir?: string; cwd?: string } = {}
 ): FrappeAppValidationResult {
+  const cwd = options.cwd || process.cwd();
+  const detectedBench = options.benchDir || findBenchDirectory(cwd);
+  const benchApps = findBenchApps(detectedBench);
+
   const appName = (appNameInput || '').trim();
 
   if (!appName) {
+    const count = benchApps.customApps.length;
+    let errorMsg = 'Please specify a Frappe custom app name (e.g. my_custom_app).';
+    if (count > 1) {
+      errorMsg += `\nMultiple custom apps detected in Bench: ${benchApps.customApps.join(', ')}.\nUse: --app <name>`;
+    } else if (count === 1) {
+      errorMsg += `\nDetected single custom app in Bench: '${benchApps.customApps[0]}'. Use: --app ${benchApps.customApps[0]}`;
+    }
     return {
       valid: false,
-      error: 'Please specify a Frappe custom app name (e.g. my_custom_app).',
+      error: errorMsg,
+      candidateApps: benchApps.customApps,
     };
   }
 
@@ -72,9 +119,6 @@ export function validateFrappeApp(
       error: `Invalid app name '${appName}'. Frappe app names should only contain alphanumeric characters, underscores, or hyphens.`,
     };
   }
-
-  const cwd = options.cwd || process.cwd();
-  const detectedBench = options.benchDir || findBenchDirectory(cwd);
 
   const candidateDirs: string[] = [];
 

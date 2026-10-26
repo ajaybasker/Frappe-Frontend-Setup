@@ -146,12 +146,16 @@ export function evaluateEnvironment(
       hint: 'You can use in-tree frontend integration mode to build directly into public assets.',
     });
   } else if (facts.bench.isInsideBench) {
+    const appsSuffix =
+      facts.bench.customApps && facts.bench.customApps.length > 0
+        ? ` (${facts.bench.customApps.length} custom apps detected: ${facts.bench.customApps.join(', ')})`
+        : '';
     checks.push({
       id: 'frappe-context',
       category: 'bench',
       title: 'Frappe Context',
       status: 'info',
-      message: `Inside Frappe Bench workspace at ${facts.bench.benchRoot}.`,
+      message: `Inside Frappe Bench workspace at ${facts.bench.benchRoot}${appsSuffix}.`,
       hint: 'Custom app frontend scaffolding will automatically detect bench assets.',
     });
   } else if (facts.bench.cliAvailable) {
@@ -171,6 +175,18 @@ export function evaluateEnvironment(
       status: 'info',
       message: 'No Frappe Bench detected in the current directory context.',
       hint: 'Standalone frontend applications (Vue, React) can be created here. In-tree custom app integration requires a bench workspace.',
+    });
+  }
+
+  // 6. Monorepo Workspace Check (if detected)
+  if (facts.workspace) {
+    checks.push({
+      id: 'workspace-monorepo',
+      category: 'package-manager',
+      title: 'Monorepo Workspace',
+      status: 'info',
+      message: `${facts.workspace.type.toUpperCase()} workspace detected${facts.workspace.isTurborepo ? ' with Turborepo' : ''} at ${facts.workspace.rootDir}.`,
+      hint: 'Frontend commands respect monorepo package isolation and dependencies.',
     });
   }
 

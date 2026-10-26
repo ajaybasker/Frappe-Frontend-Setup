@@ -47,6 +47,8 @@ export interface BenchFacts {
   cliPath?: string;
   isInsideBench: boolean;
   benchRoot?: string;
+  allApps?: string[];
+  customApps?: string[];
   isInsideApp: boolean;
   appName?: string;
   appRoot?: string;
@@ -58,6 +60,12 @@ export interface EnvironmentFacts {
   packageManagers: PackageManagersFacts;
   git: GitFacts;
   bench: BenchFacts;
+  workspace?: {
+    type: string;
+    isTurborepo: boolean;
+    rootDir: string;
+    packages: string[];
+  };
   cwd: string;
 }
 

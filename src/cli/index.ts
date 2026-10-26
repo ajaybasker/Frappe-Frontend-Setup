@@ -145,11 +145,16 @@ export function createProgram(): Command {
 
   program
     .command('integrate <target>')
-    .description('Connect frontend with a Frappe custom app for production asset delivery and routing')
+    .description('Connect frontend with a Frappe custom app for production asset delivery, routing, and Desk Pages')
     .option('--app <name>', 'Target Frappe custom app name')
     .option('--bench-dir <path>', 'Frappe bench root directory')
     .option('--frontend-dir <path>', 'Frontend source directory')
+    .option('--mode <mode>', 'Integration mode: portal or desk (default: portal)')
     .option('--route <route>', 'Frappe portal SPA route (default: frontend)')
+    .option('--page <name>', 'Frappe Desk Page name (for desk mode)')
+    .option('--page-title <title>', 'Frappe Desk Page title')
+    .option('--module <module>', 'Frappe app module name for Desk Page')
+    .option('--output-dir <dir>', 'Scoped public asset subdirectory (defaults to frontend or page name)')
     .option('--check', 'Inspect integration status without modifying files')
     .option('--dry-run', 'Display proposed changes without writing files or building')
     .option('--skip-build', 'Skip running production build verification')
@@ -161,7 +166,12 @@ export function createProgram(): Command {
           app?: string;
           benchDir?: string;
           frontendDir?: string;
+          mode?: 'portal' | 'desk';
           route?: string;
+          page?: string;
+          pageTitle?: string;
+          module?: string;
+          outputDir?: string;
           check?: boolean;
           dryRun?: boolean;
           skipBuild?: boolean;
@@ -182,11 +192,14 @@ export function createProgram(): Command {
 
   program
     .command('check [dir]')
-    .description('Inspect frontend project and Frappe app for compatibility, configuration, and health')
+    .description('Inspect frontend project and Frappe app for compatibility, monorepo workspaces, and health')
     .option('--cwd <path>', 'Working directory to inspect')
     .option('--app <name>', 'Frappe custom app name')
     .option('--bench-dir <path>', 'Frappe bench root directory')
+    .option('--mode <mode>', 'Integration mode to check: portal or desk')
     .option('--route <route>', 'Frappe portal SPA route')
+    .option('--page <name>', 'Frappe Desk Page name')
+    .option('--output-dir <dir>', 'Scoped asset subdirectory in public/')
     .option('--json', 'Output machine-readable report in JSON format to stdout')
     .action(
       async (
@@ -195,7 +208,10 @@ export function createProgram(): Command {
           cwd?: string;
           app?: string;
           benchDir?: string;
+          mode?: 'portal' | 'desk';
           route?: string;
+          page?: string;
+          outputDir?: string;
           json?: boolean;
         }
       ) => {
@@ -204,7 +220,10 @@ export function createProgram(): Command {
             cwd: dir || options.cwd,
             app: options.app,
             benchDir: options.benchDir,
+            mode: options.mode,
             route: options.route,
+            page: options.page,
+            outputDir: options.outputDir,
             json: options.json,
           });
           process.exitCode = exitCode;
